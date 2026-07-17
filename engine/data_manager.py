@@ -75,11 +75,59 @@ class DataManager:
             kwargs["prefetch_factor"] = self.prefetch_factor
 
         import torch.distributed as dist
-        from torch.utils.data.distributed import DistributedSampler
         
         is_ddp = dist.is_initialized()
-        train_sampler = DistributedSampler(train_dataset, shuffle=True) if is_ddp else None
-        val_sampler = DistributedSampler(val_dataset, shuffle=False) if is_ddp else None
+        world_size = dist.get_world_size() if is_ddp else 1
+        rank = dist.get_rank() if is_ddp else 0
+        
+        class MemoryEfficientDistributedSampler(torch.utils.data.Sampler):
+            """
+            A memory-efficient alternative to PyTorch's DistributedSampler.
+            PyTorch's default instantiates a list of all indices in RAM (`list(range(2.5B))`), 
+            which requires ~70GB of RAM and causes SIGKILL on Kaggle.
+            This yields randomly generated indices on the fly, ensuring no OOM.
+            """
+            def __init__(self, dataset, num_replicas=1, rank=0, shuffle=True, seed=0):
+                self.dataset = dataset
+                self.num_replicas = num_replicas
+                self.rank = rank
+                self.epoch = 0
+                self.shuffle = shuffle
+                self.seed = seed
+                self.total_size = len(self.dataset)
+                
+            def set_epoch(self, epoch):
+                self.epoch = epoch
+                
+            def __iter__(self):
+                # We yield indices forever in chunks. 
+                # To ensure each rank sees different data if shuffling, we just generate random indices.
+                # If not shuffling, we chunk the dataset sequentially.
+                g = torch.Generator()
+                g.manual_seed(self.seed + self.epoch + self.rank)
+                
+                if self.shuffle:
+                    while True:
+                        # Yield a batch of random indices
+                        # We use randint to avoid allocating randperm of size 2.5B
+                        yield int(torch.randint(0, self.total_size, (1,), generator=g).item())
+                else:
+                    # Sequential chunking
+                    chunk_size = self.total_size // self.num_replicas
+                    start_idx = self.rank * chunk_size
+                    end_idx = start_idx + chunk_size
+                    idx = start_idx
+                    while True:
+                        yield idx
+                        idx += 1
+                        if idx >= end_idx:
+                            idx = start_idx
+                            
+            def __len__(self):
+                return self.total_size // self.num_replicas
+
+        train_sampler = MemoryEfficientDistributedSampler(train_dataset, world_size, rank, shuffle=True) if is_ddp else None
+        val_sampler = MemoryEfficientDistributedSampler(val_dataset, world_size, rank, shuffle=False) if is_ddp else None
 
         self.train_loader = DataLoader(
             train_dataset, 
