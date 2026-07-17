@@ -1,0 +1,26 @@
+vocab_size: 50257
+context_length: 1024
+dropout: 0.1
+bias: true
+ffn_type: standard
+attention_type: mha
+position_type: absolute
+norm_type: layer_norm
+batch_size: 16
+max_iters: 10000
+grad_accum_steps: 1
+learning_rate: 0.0006
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+warmup_iters: 100
+lr_decay_iters: 10000
+min_lr: 6.0e-05
+device: auto
+dtype: auto
+val_interval: 500
+checkpoint_interval: 1000
+eval_iters: 100
+checkpoint:
+  keep_last: 3

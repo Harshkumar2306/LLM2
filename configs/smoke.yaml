@@ -1,0 +1,43 @@
+device: "cpu"
+dtype: "float32"
+
+d_model: 64
+n_heads: 2
+n_layers: 2
+context_length: 64
+vocab_size: 50257 # Will be overwritten by tokenizer, but required for validation
+
+ffn_type: "standard"
+attention_type: "mha"
+position_type: "absolute"
+norm_type: "layer_norm"
+dropout: 0.0
+
+batch_size: 4
+max_iters: 100
+grad_accum_steps: 1
+learning_rate: 0.0003
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+warmup_iters: 10
+lr_decay_iters: 100
+min_lr: 0.00003
+
+val_interval: 20
+checkpoint_interval: 20
+eval_iters: 5
+eval_interval: 20
+save_interval: 20
+log_interval: 10
+resume_mode: "none"
+
+checkpoint:
+  keep_last: 2
+
+experiment_name: "smoke_test"
+num_workers: 0
+pin_memory: false
+persistent_workers: false
+prefetch_factor: 2

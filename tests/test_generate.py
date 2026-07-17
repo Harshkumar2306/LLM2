@@ -1,10 +1,11 @@
+from tests.helpers import get_test_config
 import torch
 from config.gpt_config import GPTConfig
 from core.model import GPT
 
 def test_generate():
     torch.manual_seed(42)
-    config = GPTConfig(vocab_size=100, d_model=32, n_heads=2, n_layers=2, context_length=8)
+    config = get_test_config(vocab_size=100, d_model=32, n_heads=2, n_layers=2, context_length=8)
     model = GPT(config)
     
     # Initial prompt: batch 2, time 3

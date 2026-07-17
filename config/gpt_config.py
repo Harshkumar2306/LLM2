@@ -3,20 +3,31 @@ Centralized Configuration for the GPT Model.
 This module defines the architectural blueprint of the model.
 """
 from dataclasses import dataclass
-
+from typing import Optional
+from config.enums import FFNType, AttentionType, PositionType, NormType
 
 @dataclass
 class GPTConfig:
     """
     Hyperparameters defining the physical structure of the GPT model.
     """
-    vocab_size: int = 50257  # Standard GPT-2 vocab size
-    context_length: int = 1024 # Sequence length (T)
-    d_model: int = 768       # Embedding dimension (C)
-    n_layers: int = 12       # Number of Transformer blocks
-    n_heads: int = 12        # Number of attention heads
-    dropout: float = 0.1     # Dropout probability
-    bias: bool = True        # Use bias in linear layers (True for GPT-2, False for LLaMA)
+    vocab_size: int
+    context_length: int
+    d_model: int
+    n_layers: int
+    n_heads: int
+    ffn_type: FFNType
+    attention_type: AttentionType
+    position_type: PositionType
+    norm_type: NormType
+    
+    dropout: float = 0.1
+    bias: bool = True
+    fingerprint: Optional[str] = None
+    
+    # Training Specific parameters commonly passed around with config
+    batch_size: int = 16
+    max_iters: int = 10000
 
     def __post_init__(self) -> None:
         """

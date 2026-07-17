@@ -141,3 +141,39 @@ class GPT(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
             
         return idx
+
+    def print_parameter_statistics(self):
+        """Prints a detailed breakdown of model parameters."""
+        stats = {
+            "Embedding parameters": sum(p.numel() for p in self.embeddings.parameters()),
+            "Attention parameters": sum(sum(p.numel() for p in b.attn.parameters()) for b in self.blocks),
+            "MLP parameters": sum(sum(p.numel() for p in b.mlp.parameters()) for b in self.blocks),
+            "LayerNorm parameters": sum(sum(p.numel() for p in b.ln_1.parameters()) + sum(p.numel() for p in b.ln_2.parameters()) for b in self.blocks) + sum(p.numel() for p in self.ln_f.parameters()),
+        }
+        
+        # In weight tying, the LM head shares weights with the token embedding.
+        stats["LM Head parameters"] = 0
+        
+        total_params = sum(p.numel() for p in self.parameters())
+        trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        
+        print("\n====================================")
+        print("PARAMETER STATISTICS")
+        print("====================================")
+        for name, count in stats.items():
+            print(f"{name:<15}: {count:,}")
+        print("------------------------------------")
+        print(f"Total Params   : {total_params:,}")
+        print(f"Trainable      : {trainable_params:,}")
+        print("====================================\n")
+
+    def estimate_flops(self, batch_size: int) -> float:
+        """
+        Estimates the number of floating point operations for a single forward+backward pass.
+        Formula derived from OpenAI's scaling laws:
+        FLOPs ≈ 6 * N * B * T
+        where N = number of parameters, B = batch size, T = sequence length.
+        """
+        N = sum(p.numel() for p in self.parameters())
+        T = self.config.context_length
+        return 6.0 * N * batch_size * T

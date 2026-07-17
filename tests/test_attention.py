@@ -1,3 +1,4 @@
+from tests.helpers import get_test_config
 import torch
 import math
 import sys
@@ -12,7 +13,7 @@ def test_attention_shape():
     """
     Test that the Attention module strictly preserves the tensor shape (B, T, C).
     """
-    config = GPTConfig(d_model=64, n_heads=4, context_length=16)
+    config = get_test_config(d_model=64, n_heads=4, context_length=16)
     attn = CausalSelfAttention(config)
     x = torch.randn(2, 10, 64)
     
@@ -29,7 +30,7 @@ def test_causal_masking_correctness():
     Ensure that tokens cannot attend to future tokens.
     If we change the input at T=4, the outputs at T=0, 1, 2, 3 must remain absolutely identical.
     """
-    config = GPTConfig(d_model=64, n_heads=4, context_length=16, dropout=0.0)
+    config = get_test_config(d_model=64, n_heads=4, context_length=16, dropout=0.0)
     attn = CausalSelfAttention(config)
     attn.eval() # Disable dropout for deterministic outputs
     
@@ -52,7 +53,7 @@ def test_manual_vs_flash_equivalence():
     """
     Verify that our manual math exactly matches the C++ optimized flash attention.
     """
-    config = GPTConfig(d_model=64, n_heads=4, context_length=16, dropout=0.0)
+    config = get_test_config(d_model=64, n_heads=4, context_length=16, dropout=0.0)
     attn = CausalSelfAttention(config)
     attn.eval()
     

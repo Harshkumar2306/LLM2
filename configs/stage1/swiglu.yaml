@@ -1,0 +1,10 @@
+base: ../base.yaml
+
+# 25M Parameter Scale
+d_model: 384
+n_layers: 6
+n_heads: 6
+
+# SwiGLU specific settings
+ffn_type: swiglu
+position_type: absolute

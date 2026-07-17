@@ -1,3 +1,4 @@
+from tests.helpers import get_test_config
 import torch
 import sys
 import os
@@ -10,7 +11,7 @@ def test_model_shape():
     """
     Ensure the full model compiles and outputs the correct shape (B, T, Vocab_Size).
     """
-    config = GPTConfig(vocab_size=100, d_model=32, n_heads=2, n_layers=2, context_length=16)
+    config = get_test_config(vocab_size=100, d_model=32, n_heads=2, n_layers=2, context_length=16)
     model = GPT(config)
     
     idx = torch.randint(0, 100, (2, 10)) # Batch 2, Time 10
@@ -23,7 +24,7 @@ def test_weight_tying():
     """
     Verify that the embedding layer and LM head point to the exact same memory in RAM.
     """
-    config = GPTConfig(vocab_size=100, d_model=32, n_heads=2, n_layers=2, context_length=16)
+    config = get_test_config(vocab_size=100, d_model=32, n_heads=2, n_layers=2, context_length=16)
     model = GPT(config)
     
     # Check that they are the identical Python object (memory address)
@@ -33,7 +34,7 @@ def test_residual_initialization():
     """
     Verify that the residual layers have been scaled down correctly during initialization.
     """
-    config = GPTConfig(vocab_size=100, d_model=32, n_heads=2, n_layers=2, context_length=16)
+    config = get_test_config(vocab_size=100, d_model=32, n_heads=2, n_layers=2, context_length=16)
     model = GPT(config)
     
     # We expect standard deviation to be 0.02 * (1 / sqrt(2 * n_layers))

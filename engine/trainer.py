@@ -1,229 +1,239 @@
-import os
-import math
 import time
-import json
-import contextlib
 import torch
 import torch.nn as nn
-from torch.optim import AdamW
+from typing import Callable, Optional, Tuple, Dict, Any
 
-def get_default_device():
-    """Single device abstraction for CPU, MPS (Apple Silicon), and CUDA."""
-    if torch.cuda.is_available():
-        return 'cuda'
-    if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        return 'mps'
-    return 'cpu'
-
-def get_default_dtype(device):
-    """Sensible defaults for mixed precision."""
-    if device == 'cuda':
-        return 'bfloat16' if torch.cuda.is_bf16_supported() else 'float16'
-    # MPS runs fine in fp32 implicitly, and PyTorch MPS autocast is sometimes experimental.
-    # We default to float32 for safety, but allow user override.
-    return 'float32'
-
-class TrainerConfig:
-    def __init__(self, 
-                 # Optimization
-                 max_iters=1000, batch_size=4, learning_rate=6e-4, 
-                 weight_decay=1e-1, beta1=0.9, beta2=0.95, 
-                 # Features
-                 grad_clip=1.0, grad_accum_steps=1,
-                 # LR Schedule
-                 warmup_iters=100, lr_decay_iters=1000, min_lr=6e-5,
-                 # Systems
-                 device=None, dtype=None, 
-                 # I/O
-                 checkpoint_dir='checkpoints', log_file='logs/training.jsonl'):
-        self.device = device if device else get_default_device()
-        self.dtype = dtype if dtype else get_default_dtype(self.device)
-        self.max_iters = max_iters
-        self.batch_size = batch_size
-        self.learning_rate = learning_rate
-        self.weight_decay = weight_decay
-        self.beta1 = beta1
-        self.beta2 = beta2
-        
-        self.grad_clip = grad_clip
-        self.grad_accum_steps = grad_accum_steps
-        
-        self.warmup_iters = warmup_iters
-        self.lr_decay_iters = lr_decay_iters
-        self.min_lr = min_lr
-        
-        self.checkpoint_dir = checkpoint_dir
-        self.log_file = log_file
+from engine.training_state import TrainingState
+from engine.device_manager import DeviceManager
+from engine.checkpoint_manager import CheckpointManager
+from engine.experiment_manager import ExperimentManager
+from engine.validation_manager import ValidationManager
+from utils.reproducibility import ReproducibilityEngine
 
 class Trainer:
     """
-    The main training engine prioritizing correctness over optimization.
-    Features like AMP, gradient accumulation, and clipping are strictly configurable.
+    The Orchestrator. 
+    Strictly coordinates the specialized managers and orchestrates the event-driven training loop.
+    Does NOT contain file I/O, device placement logic, or ad-hoc validation loops.
     """
-    def __init__(self, config: TrainerConfig, model: nn.Module, train_dataloader=None):
+    def __init__(
+        self,
+        model: nn.Module,
+        optimizer: torch.optim.Optimizer,
+        scheduler: Any,
+        device_manager: DeviceManager,
+        checkpoint_manager: CheckpointManager,
+        experiment_manager: ExperimentManager,
+        validation_manager: ValidationManager,
+        config: Dict[str, Any]
+    ):
+        self.model = model
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        
+        self.device_manager = device_manager
+        self.checkpoint_manager = checkpoint_manager
+        self.experiment_manager = experiment_manager
+        self.validation_manager = validation_manager
         self.config = config
-        self.device = config.device
-        self.model = model.to(self.device)
-        self.train_dataloader = train_dataloader
         
-        self.optimizer = self._configure_optimizers()
+        self.state = TrainingState()
+        self.scaler = self.device_manager.get_grad_scaler()
         
-        # 1. Mixed Precision (Optional)
-        ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}.get(config.dtype, torch.float32)
-        if config.dtype in ['float16', 'bfloat16'] and self.device == 'cuda':
-            self.ctx = torch.autocast(device_type='cuda', dtype=ptdtype)
-        elif config.dtype in ['float16', 'bfloat16'] and self.device == 'mps' and hasattr(torch.amp, 'autocast'):
-            self.ctx = torch.autocast(device_type='mps', dtype=ptdtype)
-        else:
-            self.ctx = contextlib.nullcontext()
+        # Extract training configurations (from flat config)
+        self.max_iters = self.config.get("max_iters", 1000)
+        self.eval_interval = self.config.get("eval_interval", 100)
+        self.eval_iters = self.config.get("eval_iters", 10)
+        self.save_interval = self.config.get("save_interval", 100)
+        self.log_interval = self.config.get("log_interval", 10)
+        self.grad_clip = self.config.get("grad_clip", 1.0)
+        
+        self.resume_mode = self.config.get("resume_mode", "none")
+        if self.resume_mode != "none":
+            self._resume_training()
+
+    def _resume_training(self):
+        """Coordinates resume logic via CheckpointManager."""
+        try:
+            checkpoint = self.checkpoint_manager.load(mode=self.resume_mode)
             
-        # Scaler is only needed for float16 (to prevent underflow), not bfloat16 or float32
-        self.scaler = torch.cuda.amp.GradScaler(enabled=(config.dtype == 'float16')) if self.device == 'cuda' else None
-        
-        # 2. I/O Setup
-        os.makedirs(self.config.checkpoint_dir, exist_ok=True)
-        if os.path.dirname(self.config.log_file):
-            os.makedirs(os.path.dirname(self.config.log_file), exist_ok=True)
+            # Restore model and optimizer
+            self.model.load_state_dict(checkpoint["model_state"])
+            self.optimizer.load_state_dict(checkpoint["optimizer_state"])
             
-        self.current_iter = 0
-
-    def _configure_optimizers(self):
-        param_dict = {pn: p for pn, p in self.model.named_parameters() if p.requires_grad}
-        decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
-        nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
-        optim_groups = [
-            {'params': decay_params, 'weight_decay': self.config.weight_decay},
-            {'params': nodecay_params, 'weight_decay': 0.0}
-        ]
-        return AdamW(optim_groups, lr=self.config.learning_rate, betas=(self.config.beta1, self.config.beta2))
-
-    def get_lr(self, it):
-        if it < self.config.warmup_iters:
-            return self.config.learning_rate * (it + 1) / (self.config.warmup_iters + 1)
-        if it > self.config.lr_decay_iters:
-            return self.config.min_lr
-        decay_ratio = (it - self.config.warmup_iters) / (self.config.lr_decay_iters - self.config.warmup_iters)
-        coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
-        return self.config.min_lr + coeff * (self.config.learning_rate - self.config.min_lr)
-        
-    def save_checkpoint(self, path):
-        checkpoint = {
-            'model_state': self.model.state_dict(),
-            'optimizer_state': self.optimizer.state_dict(),
-            'config': self.config.__dict__,
-            'current_iter': self.current_iter,
-            'rng_state_cpu': torch.get_rng_state(),
-        }
-        if self.device == 'cuda':
-            checkpoint['rng_state_gpu'] = torch.cuda.get_rng_state()
-        elif self.device == 'mps':
-            # MPS currently doesn't have a specific get_rng_state(), it relies on CPU seed usually
-            pass 
-            
-        torch.save(checkpoint, path)
-
-    def load_checkpoint(self, path):
-        checkpoint = torch.load(path, map_location=self.device)
-        self.model.load_state_dict(checkpoint['model_state'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state'])
-        self.current_iter = checkpoint['current_iter']
-        # Map_location moves everything to device, but set_rng_state expects CPU ByteTensor
-        torch.set_rng_state(checkpoint['rng_state_cpu'].cpu().byte())
-        if self.device == 'cuda' and 'rng_state_gpu' in checkpoint:
-            torch.cuda.set_rng_state(checkpoint['rng_state_gpu'].cpu().byte())
-
-    @torch.no_grad()
-    def evaluate(self, val_dataloader, eval_iters=100) -> float:
-        """
-        Runs validation loop. Disables gradients, computes average loss.
-        """
-        self.model.eval()
-        losses = []
-        
-        # In a real training run, we might want to iterate sequentially.
-        # But for large datasets, random sampling `eval_iters` batches is faster.
-        iterator = iter(val_dataloader)
-        
-        for _ in range(eval_iters):
-            try:
-                x, y = next(iterator)
-            except StopIteration:
-                iterator = iter(val_dataloader)
-                x, y = next(iterator)
+            # Restore scheduler
+            if self.scheduler and checkpoint["scheduler_state"]:
+                self.scheduler.load_state_dict(checkpoint["scheduler_state"])
                 
-            x, y = x.to(self.device), y.to(self.device)
-            with self.ctx:
-                logits, loss = self.model(x, targets=y)
-            losses.append(loss.item())
-            
-        self.model.train()
-        return sum(losses) / len(losses) if losses else 0.0
+            # Restore scaler
+            if self.scaler and checkpoint["grad_scaler_state"]:
+                self.scaler.load_state_dict(checkpoint["grad_scaler_state"])
+                
+            # Restore RNG
+            if checkpoint["rng_states"]:
+                ReproducibilityEngine.restore_rng_states(checkpoint["rng_states"])
+                
+            # Restore Training State
+            if "training_progress" in checkpoint:
+                self.state.load_dict(checkpoint["training_progress"])
+                
+            print(f"[Trainer] Resumed from iteration {self.state.iteration} with best val loss {self.state.best_val_loss}")
+        except Exception as e:
+            print(f"[Trainer] Could not resume: {e}. Starting fresh.")
 
-    def log_metrics(self, epoch, loss, val_loss, lr, grad_norm, dt, tokens_processed):
-        eta = (self.config.max_iters - self.current_iter) * dt
-        log_entry = {
-            "epoch": round(epoch, 4),
-            "iter": self.current_iter,
-            "loss": round(loss, 4),
-            "val_loss": round(val_loss, 4) if val_loss is not None else None,
-            "lr": f"{lr:.2e}",
-            "grad_norm": round(grad_norm, 4),
-            "tokens_processed": tokens_processed,
-            "iter_time_ms": round(dt * 1000, 2),
-            "eta_sec": round(eta, 2)
+    # =========================================================================
+    # EVENT HOOKS
+    # =========================================================================
+
+    def before_train(self):
+        self.model.train()
+        self.start_time = time.time()
+
+    def before_step(self):
+        self.step_start_time = time.time()
+
+    def after_step(self):
+        # Update timings
+        elapsed = time.time() - self.step_start_time
+        self.state.elapsed_time += elapsed
+        
+        # Calculate rates
+        # (Assuming batch_size and block_size could be passed in to compute tokens_per_second if needed)
+        tokens_per_sec = 0 # Placeholder for now
+
+        # 1. Logging Trigger
+        if self.state.iteration > 0 and self.state.iteration % self.log_interval == 0:
+            metrics = {
+                "iteration": self.state.iteration,
+                "train_loss": getattr(self, "current_loss", None),
+                "learning_rate": self.state.current_learning_rate,
+                "gradient_norm": self.state.gradient_norm,
+                "elapsed_time": self.state.elapsed_time,
+                "best_val_loss": self.state.best_val_loss
+            }
+            self.experiment_manager.log_metrics(metrics)
+            
+        # 2. Validation Trigger
+        if self.state.iteration > 0 and self.state.iteration % self.eval_interval == 0:
+            self._trigger_validation()
+            
+        # 3. Checkpoint Trigger
+        if self.state.iteration > 0 and self.state.iteration % self.save_interval == 0:
+            self._trigger_checkpoint(is_best=False)
+
+    def after_train(self):
+        # Ensure final state is saved
+        self._trigger_checkpoint(is_best=False)
+        self.experiment_manager.generate_summary()
+
+    # =========================================================================
+    # ACTIONS
+    # =========================================================================
+
+    def _trigger_validation(self):
+        metrics = self.validation_manager.evaluate(
+            self.model, 
+            self.eval_iters, 
+            self.val_batch_fetcher
+        )
+        
+        val_loss = metrics.get("val_loss", float('inf'))
+        
+        is_best = val_loss < self.state.best_val_loss
+        if is_best:
+            self.state.best_val_loss = val_loss
+            self._trigger_checkpoint(is_best=True)
+            
+        # Log validation metrics
+        val_record = {
+            "iteration": self.state.iteration,
+            "val_loss": val_loss,
+            "elapsed_time": self.state.elapsed_time,
+            "best_val_loss": self.state.best_val_loss
         }
-        # Print to console
-        val_str = f" | Val {log_entry['val_loss']:.4f}" if val_loss is not None else ""
-        print(f"Ep {log_entry['epoch']:.2f} | It {self.current_iter:04d} | Loss {log_entry['loss']:.4f}{val_str} | LR {log_entry['lr']} | Norm {log_entry['grad_norm']:.2f} | dt {log_entry['iter_time_ms']:.2f}ms | ETA {log_entry['eta_sec']:.0f}s")
-        
-        # Write to structured JSONL
-        with open(self.config.log_file, 'a') as f:
-            f.write(json.dumps(log_entry) + '\n')
+        self.experiment_manager.log_metrics(val_record)
 
-    def train_step(self, x: torch.Tensor, y: torch.Tensor) -> float:
-        self.model.train()
-        t0 = time.time()
+    def _trigger_checkpoint(self, is_best: bool):
+        scaler_state = self.scaler.state_dict() if self.scaler else None
+        scheduler_state = self.scheduler.state_dict() if self.scheduler else None
         
-        # 1. Learning Rate Scheduler
-        lr = self.get_lr(self.current_iter)
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = lr
-            
-        self.optimizer.zero_grad(set_to_none=True)
+        self.checkpoint_manager.save(
+            model_state=self.model.state_dict(),
+            optimizer_state=self.optimizer.state_dict(),
+            scheduler_state=scheduler_state,
+            grad_scaler_state=scaler_state,
+            rng_states=ReproducibilityEngine.capture_rng_states(),
+            iteration=self.state.iteration,
+            metrics={"best_val_loss": self.state.best_val_loss},
+            is_best=is_best
+        )
         
-        # 2. Gradient Accumulation & Forward/Backward (with optional AMP)
-        accum_loss = 0.0
-        # In a real scenario with DataLoader, we would fetch grad_accum_steps micro-batches.
-        # For simplicity in this step API, we'll just divide the loss by grad_accum_steps 
-        # assuming the caller is managing the micro-batches. If they pass a full batch, 
-        # grad_accum_steps=1 is standard.
-        with self.ctx:
-            logits, loss = self.model(x, targets=y)
-            loss = loss / self.config.grad_accum_steps
-            
-        # Backward
-        if self.scaler is not None:
-            self.scaler.scale(loss).backward()
-        else:
-            loss.backward()
-            
-        accum_loss = loss.item() * self.config.grad_accum_steps
+        # Sync experiment state
+        self.state.to_dict()
+
+    # =========================================================================
+    # CORE LOOP
+    # =========================================================================
+
+    def train(self, train_batch_fetcher: Callable, val_batch_fetcher: Callable):
+        """
+        The orchestrator execution block.
+        Receives abstract fetchers yielding (x, y) tensors.
+        """
+        self.val_batch_fetcher = val_batch_fetcher
+        self.before_train()
         
-        # 3. Gradient Clipping
-        if self.scaler is not None:
-            self.scaler.unscale_(self.optimizer)
+        while self.state.iteration < self.max_iters:
+            self.before_step()
             
-        grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_clip)
-        
-        # 4. Optimizer Step
-        if self.scaler is not None:
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-        else:
-            self.optimizer.step()
+            # Fetch and place data
+            x, y = train_batch_fetcher()
+            x, y = self.device_manager.to_device(x, y)
             
-        t1 = time.time()
-        dt = t1 - t0
-        
-        self.current_iter += 1
-        return accum_loss, lr, grad_norm.item(), dt
+            # --- THE OPTIMIZATION PIPELINE ---
+            
+            # 1. Forward
+            with self.device_manager.autocast():
+                logits, loss = self.model(x, targets=y)
+                
+            self.current_loss = loss.item()
+                
+            # 2. Loss Scaling
+            if self.scaler:
+                self.scaler.scale(loss).backward() # 3. Backward
+                
+                # 4. Gradient Unscaling & Clipping
+                if self.grad_clip > 0:
+                    self.scaler.unscale_(self.optimizer)
+                    self.state.gradient_norm = torch.nn.utils.clip_grad_norm_(
+                        self.model.parameters(), self.grad_clip
+                    ).item()
+                    
+                # 5. Optimizer Step
+                scale_before = self.scaler.get_scale()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+                scale_after = self.scaler.get_scale()
+                optimizer_step_was_skipped = scale_after < scale_before
+            else:
+                loss.backward() # 3. Backward
+                if self.grad_clip > 0:
+                    self.state.gradient_norm = torch.nn.utils.clip_grad_norm_(
+                        self.model.parameters(), self.grad_clip
+                    ).item()
+                self.optimizer.step() # 5. Optimizer Step
+                optimizer_step_was_skipped = False
+                
+            # 6. Scheduler Step
+            # Only advance the learning rate if the optimizer successfully updated weights.
+            if self.scheduler and not optimizer_step_was_skipped:
+                self.scheduler.step(self.state)
+            
+            # 7. Zero Grad
+            self.optimizer.zero_grad(set_to_none=True)
+            
+            self.state.iteration += 1
+            self.state.global_step += 1
+            self.after_step()
+            
+        self.after_train()
