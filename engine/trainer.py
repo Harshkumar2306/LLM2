@@ -107,9 +107,10 @@ class Trainer:
 
         # 1. Logging Trigger
         if self.state.iteration > 0 and self.state.iteration % self.log_interval == 0:
+            train_loss = getattr(self, "current_loss", float('inf'))
             metrics = {
                 "iteration": self.state.iteration,
-                "train_loss": getattr(self, "current_loss", None),
+                "train_loss": train_loss,
                 "learning_rate": self.state.current_learning_rate,
                 "gradient_norm": self.state.gradient_norm,
                 "elapsed_time": self.state.elapsed_time,
@@ -117,6 +118,7 @@ class Trainer:
             }
             if self.master_process:
                 self.experiment_manager.log_metrics(metrics)
+                print(f"Iter: {self.state.iteration:<5} | Loss: {train_loss:.4f} | LR: {self.state.current_learning_rate:.2e} | Time: {self.state.elapsed_time:.1f}s", flush=True)
             
         # 2. Validation Trigger
         if self.state.iteration > 0 and self.state.iteration % self.eval_interval == 0:
@@ -159,6 +161,7 @@ class Trainer:
         }
         if self.master_process:
             self.experiment_manager.log_metrics(val_record)
+            print(f"*** EVAL | Iter: {self.state.iteration:<5} | Val Loss: {val_loss:.4f} | Best: {self.state.best_val_loss:.4f} ***", flush=True)
 
     def _trigger_checkpoint(self, is_best: bool):
         scaler_state = self.scaler.state_dict() if self.scaler else None
