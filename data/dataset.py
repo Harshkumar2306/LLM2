@@ -66,6 +66,36 @@ class InMemoryStorage:
         return TokenSequence(tokens=self.data[index : index + length])
 
 
+class MemmapStorage:
+    """
+    Memory-maps the preprocessed binary dataset directly from the hard drive.
+    Crucial for massive datasets (e.g., 2GB+) that cannot fit in standard RAM.
+    """
+    def __init__(self, filepath: str):
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Dataset file not found: {filepath}")
+        
+        # Load via numpy memmap (does not load into RAM)
+        self.data_np = np.memmap(filepath, dtype=np.uint16, mode='r')
+        self._len = len(self.data_np)
+        
+        if self._len == 0:
+            raise ValueError(f"Dataset file {filepath} is completely empty.")
+
+    def __len__(self) -> int:
+        return self._len
+        
+    def get_sequence(self, index: int, length: int) -> TokenSequence:
+        if index < 0 or index + length > self._len:
+            raise IndexError(
+                f"Cannot slice length {length} at index {index}. "
+                f"Storage capacity is {self._len}."
+            )
+        # Slicing a memmap returns a standard numpy array, which we then convert to a tensor
+        chunk = self.data_np[index : index + length]
+        return TokenSequence(tokens=torch.from_numpy(chunk.astype(np.int64)))
+
+
 class GPTDataset(Dataset):
     """
     The PyTorch Dataset for Language Modeling.

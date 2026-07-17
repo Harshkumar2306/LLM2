@@ -1,4 +1,4 @@
-# 🧠 Axiom Core: Building a PyTorch LLM from Scratch
+# 🧠 Axiom Core V2: Multi-GPU PyTorch LLM (26.7M Parameters)
 
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -6,7 +6,7 @@
 
 A comprehensive, end-to-end framework for building, training, and evaluating a Large Language Model (LLM) completely from scratch. 
 
-This repository contains the pure mathematical implementation of **Axiom**, a custom generative AI built on a modern Decoder-Only Transformer architecture. It includes everything from the raw PyTorch neural network blocks to a fully automated Google Colab + Google Drive training pipeline.
+This repository contains the mathematical implementation of **Axiom V2**, a custom generative AI built on a modern Decoder-Only Transformer architecture. Scaled up to **26.7 Million parameters**, this version utilizes PyTorch `DataParallel` and memory-mapping for massive 2GB dataset training on dual-GPU environments like Kaggle T4x2.
 
 The frontend and backend deployment stack for this model can be found in the sister repository: [Axiom Deployment](https://github.com/Harshkumar2306/Axiom).
 
@@ -18,7 +18,7 @@ The frontend and backend deployment stack for this model can be found in the sis
 
 ---
 
-## 🏗️ The Architecture (17.86M Parameters)
+## 🏗️ The Architecture (26.7M Parameters)
 
 ```mermaid
 graph TD
@@ -37,7 +37,7 @@ graph TD
     style Transformer Block fill:#1e1e1e,stroke:#3b82f6,stroke-width:2px,color:#fff
 ```
 
-We didn't just build a basic neural network; we built a modern **Decoder-Only Transformer** mirroring the foundational architecture of industry-leading models like GPT-4 and Llama 3, scaled down to 17.86 Million parameters so it can be trained on consumer hardware.
+We didn't just build a basic neural network; we built a modern **Decoder-Only Transformer** mirroring the foundational architecture of industry-leading models like GPT-4 and Llama 3, scaled to **26.7 Million parameters** for multi-GPU training.
 
 ### 1. Tokenization (GPT-2 BPE)
 Before feeding text into the network, we encode it using the GPT-2 Byte-Pair Encoding (BPE) tokenizer. This allows the AI to perfectly understand sub-words and syllables while keeping its vocabulary strictly limited to exactly **50,257** tokens.
@@ -59,7 +59,7 @@ The model was trained on the `TinyShakespeare` dataset (a 1MB text file containi
 
 1. **Random Batching:** A custom Data Loader grabs random sequences of 1,024 tokens and feeds them in parallel batches to the GPU to drastically accelerate training.
 2. **Cross-Entropy Loss:** The model predicts a sequence, and we use Cross-Entropy Loss to mathematically calculate exactly how wrong its predictions were compared to the actual Shakespeare script.
-3. **AdamW Optimizer & Backpropagation:** We use the `AdamW` optimizer (with gradient clipping to prevent exploding math) to slightly tweak the values of all 17.86 million parameters in the exact opposite direction of the error.
+3. **AdamW Optimizer & Backpropagation:** We use the `AdamW` optimizer (with gradient clipping to prevent exploding math) to tweak the values of all **26.7 million** parameters in the exact opposite direction of the error.
 4. **Validation Checkpointing (90/10 Split):** To ensure the model learns English structure rather than just memorizing the script, we test it on a 10% held-out validation set. The `engine` automatically saves a `best.pt` file every time the model achieves a new high score on the unseen validation data.
 
 After 10,000 iterations, the randomized math settles, and the model masters the statistical patterns, rhythm, and vocabulary of William Shakespeare.
@@ -98,16 +98,19 @@ pip install -r requirements.txt
 python scripts/prepare_data.py --input data/input.txt --outdir data/
 ```
 
-### 2. Training
-Start the training loop. The trainer uses mixed-precision (FP16) and gradient accumulation to bypass GPU memory limits.
+### 2. Multi-GPU Training (DataParallel)
+The training loop utilizes `torch.nn.DataParallel` and `np.memmap` to handle 2GB datasets across multiple GPUs.
 ```bash
 python scripts/train.py \
     --train_bin data/train.bin \
     --val_bin data/val.bin \
     --device cuda \
-    --batch_size 4 \
+    --batch_size 16 \
     --grad_accum_steps 4 \
-    --out_dir runs/axiom_v1
+    --d_model 384 \
+    --n_heads 12 \
+    --n_layers 4 \
+    --out_dir runs/axiom_v2
 ```
 
 ### 3. Text Generation

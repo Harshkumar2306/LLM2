@@ -37,9 +37,9 @@ def parse_args():
     parser.add_argument('--val_bin', type=str, required=True, help="Path to validation .bin dataset")
     # Model
     parser.add_argument('--vocab_size', type=int, default=50257)
-    parser.add_argument('--d_model', type=int, default=256)
-    parser.add_argument('--n_heads', type=int, default=8)
-    parser.add_argument('--n_layers', type=int, default=6)
+    parser.add_argument('--d_model', type=int, default=384)
+    parser.add_argument('--n_heads', type=int, default=12)
+    parser.add_argument('--n_layers', type=int, default=4)
     parser.add_argument('--context_length', type=int, default=1024)
     # Trainer
     parser.add_argument('--batch_size', type=int, default=16)
@@ -97,7 +97,15 @@ def main():
     
     # 3. Model
     model = GPT(gpt_config)
-    param_count = sum(p.numel() for p in model.parameters())
+    
+    # 3.5 Wrap Model in DataParallel for Multi-GPU Kaggle T4x2
+    if torch.cuda.device_count() > 1 and trainer_config.device == 'cuda':
+        print(f"Let's use {torch.cuda.device_count()} GPUs with DataParallel!")
+        model = torch.nn.DataParallel(model)
+
+    # Calculate parameters (works for both DataParallel and standard model)
+    model_to_count = model.module if hasattr(model, 'module') else model
+    param_count = sum(p.numel() for p in model_to_count.parameters())
     
     # 4. Metadata Logging
     metadata = {
@@ -118,9 +126,9 @@ def main():
     print(f"Device: {trainer_config.device}")
     
     # 5. Dataloaders
-    from data.dataset import InMemoryStorage
-    train_storage = InMemoryStorage(args.train_bin)
-    val_storage = InMemoryStorage(args.val_bin)
+    from data.dataset import MemmapStorage
+    train_storage = MemmapStorage(args.train_bin)
+    val_storage = MemmapStorage(args.val_bin)
     train_dataset = GPTDataset(train_storage, args.context_length)
     val_dataset = GPTDataset(val_storage, args.context_length)
     
