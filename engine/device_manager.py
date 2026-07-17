@@ -58,7 +58,7 @@ class DeviceManager:
         if requested_dtype != "auto":
             return requested_dtype
             
-        if device == 'cuda':
+        if device.startswith('cuda'):
             return 'bfloat16' if torch.cuda.is_bf16_supported() else 'float16'
         return 'float32'
 
@@ -67,13 +67,13 @@ class DeviceManager:
         if requested_dtype == "auto":
             return
             
-        if requested_dtype == "bfloat16" and not (device == 'cuda' and torch.cuda.is_bf16_supported()):
+        if requested_dtype == "bfloat16" and not (device.startswith('cuda') and torch.cuda.is_bf16_supported()):
             raise RuntimeError(
                 f"Precision Error: Explicitly requested bfloat16, but hardware ({device}) "
                 f"does not support it. Use 'auto' or 'float16' instead."
             )
             
-        if requested_dtype == "float16" and device not in ['cuda', 'mps']:
+        if requested_dtype == "float16" and not (device.startswith('cuda') or device == 'mps'):
             raise RuntimeError(
                 f"Precision Error: Explicitly requested float16, but hardware ({device}) "
                 f"does not safely support it. Use 'auto' or 'float32' instead."
@@ -82,21 +82,23 @@ class DeviceManager:
     def _build_capabilities(self) -> DeviceCapabilities:
         is_linux = sys.platform.startswith('linux')
         
-        supports_fp16 = self.device in ['cuda', 'mps']
-        supports_bf16 = self.device == 'cuda' and torch.cuda.is_bf16_supported()
+        is_cuda = self.device.startswith('cuda')
+        
+        supports_fp16 = is_cuda or self.device == 'mps'
+        supports_bf16 = is_cuda and torch.cuda.is_bf16_supported()
         
         supports_amp = False
         if self.dtype_str != 'float32' and self.device != 'cpu':
-            if self.device == 'cuda':
+            if is_cuda:
                 supports_amp = True
             elif self.device == 'mps' and hasattr(torch.amp, 'autocast'):
                 supports_amp = True
 
-        supports_compile = self.device == 'cuda' and is_linux
-        supports_flash_attention = supports_amp and self.device == 'cuda'
-        supports_pinned_memory = self.device == 'cuda'
+        supports_compile = is_cuda and is_linux
+        supports_flash_attention = supports_amp and is_cuda
+        supports_pinned_memory = is_cuda
         
-        requires_grad_scaler = self.device == 'cuda' and self.dtype_str == 'float16'
+        requires_grad_scaler = is_cuda and self.dtype_str == 'float16'
         
         return DeviceCapabilities(
             supports_amp=supports_amp,
@@ -127,7 +129,7 @@ class DeviceManager:
         if not self.capabilities.supports_amp:
             return contextlib.nullcontext()
             
-        if self.device == 'cuda':
+        if self.device.startswith('cuda'):
             return torch.autocast(device_type='cuda', dtype=self.ptdtype)
             
         if self.device == 'mps' and hasattr(torch.amp, 'autocast'):
@@ -154,9 +156,10 @@ class DeviceManager:
         vram_total_gb = "N/A"
         cuda_ver = "N/A"
         
-        if self.device == 'cuda':
-            gpu_name = torch.cuda.get_device_name(0)
-            vram_total_gb = round(torch.cuda.get_device_properties(0).total_memory / 1e9, 2)
+        if self.device.startswith('cuda'):
+            device_id = int(self.device.split(":")[1]) if ":" in self.device else 0
+            gpu_name = torch.cuda.get_device_name(device_id)
+            vram_total_gb = round(torch.cuda.get_device_properties(device_id).total_memory / 1e9, 2)
             cuda_ver = torch.version.cuda
         elif self.device == 'mps':
             gpu_name = "Apple Silicon GPU"
@@ -167,7 +170,7 @@ class DeviceManager:
         print(f"OS:                 {os_info}")
         print(f"Python:             {py_ver}")
         print(f"PyTorch:            {torch_ver}")
-        if self.device == 'cuda':
+        if self.device.startswith('cuda'):
             print(f"CUDA Version:       {cuda_ver}")
         print(f"GPU Name:           {gpu_name}")
         if vram_total_gb != "N/A":
