@@ -3,3 +3,4 @@ numpy
 tiktoken
 tqdm
 pyyaml>=6.0
+datasets
