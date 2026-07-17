@@ -6,11 +6,15 @@ from torch.utils.data import DataLoader
 from data.dataset import MemmapStorage, GPTDataset
 from data.tokenizer import Tokenizer
 
-def _infinite_iterator(dataloader: DataLoader) -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
+def _infinite_iterator(dataloader: DataLoader, sampler=None) -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
     """Yields batches forever."""
+    epoch = 0
     while True:
+        if sampler is not None and hasattr(sampler, 'set_epoch'):
+            sampler.set_epoch(epoch)
         for batch in dataloader:
             yield batch
+        epoch += 1
 
 class DataManager:
     """
@@ -70,11 +74,32 @@ class DataManager:
             kwargs["persistent_workers"] = self.persistent_workers
             kwargs["prefetch_factor"] = self.prefetch_factor
 
-        self.train_loader = DataLoader(train_dataset, shuffle=True, **kwargs)
-        self.val_loader = DataLoader(val_dataset, shuffle=False, **kwargs)
+        import torch.distributed as dist
+        from torch.utils.data.distributed import DistributedSampler
         
-        self._train_iter = _infinite_iterator(self.train_loader)
-        self._val_iter = _infinite_iterator(self.val_loader)
+        is_ddp = dist.is_initialized()
+        train_sampler = DistributedSampler(train_dataset, shuffle=True) if is_ddp else None
+        val_sampler = DistributedSampler(val_dataset, shuffle=False) if is_ddp else None
+
+        self.train_loader = DataLoader(
+            train_dataset, 
+            shuffle=(train_sampler is None), 
+            sampler=train_sampler, 
+            **kwargs
+        )
+        self.val_loader = DataLoader(
+            val_dataset, 
+            shuffle=False, 
+            sampler=val_sampler, 
+            **kwargs
+        )
+        
+        # Keep references to samplers so we can call set_epoch() on them later
+        self.train_sampler = train_sampler
+        self.val_sampler = val_sampler
+        
+        self._train_iter = _infinite_iterator(self.train_loader, self.train_sampler)
+        self._val_iter = _infinite_iterator(self.val_loader, self.val_sampler)
 
     def get_train_batch(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """

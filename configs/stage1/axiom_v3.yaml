@@ -1,0 +1,12 @@
+base: ../base.yaml
+
+# 32M Parameter Scale
+d_model: 416
+n_layers: 8
+n_heads: 8
+
+# V3 Settings (RoPE + SwiGLU + RMSNorm)
+ffn_type: swiglu
+position_type: rope
+norm_type: rms_norm
+experiment_name: "axiom-v3"

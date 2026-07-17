@@ -49,6 +49,9 @@ class Trainer:
         self.grad_clip = self.config.get("grad_clip", 1.0)
         
         self.resume_mode = self.config.get("resume_mode", "none")
+        import os
+        self.master_process = int(os.environ.get("RANK", 0)) == 0
+        
         if self.resume_mode != "none":
             self._resume_training()
 
@@ -58,7 +61,8 @@ class Trainer:
             checkpoint = self.checkpoint_manager.load(mode=self.resume_mode)
             
             # Restore model and optimizer
-            self.model.load_state_dict(checkpoint["model_state"])
+            raw_model = self.model.module if hasattr(self.model, "module") else self.model
+            raw_model.load_state_dict(checkpoint["model_state"])
             self.optimizer.load_state_dict(checkpoint["optimizer_state"])
             
             # Restore scheduler
@@ -111,7 +115,8 @@ class Trainer:
                 "elapsed_time": self.state.elapsed_time,
                 "best_val_loss": self.state.best_val_loss
             }
-            self.experiment_manager.log_metrics(metrics)
+            if self.master_process:
+                self.experiment_manager.log_metrics(metrics)
             
         # 2. Validation Trigger
         if self.state.iteration > 0 and self.state.iteration % self.eval_interval == 0:
@@ -124,7 +129,8 @@ class Trainer:
     def after_train(self):
         # Ensure final state is saved
         self._trigger_checkpoint(is_best=False)
-        self.experiment_manager.generate_summary()
+        if self.master_process:
+            self.experiment_manager.generate_summary()
 
     # =========================================================================
     # ACTIONS
@@ -151,22 +157,25 @@ class Trainer:
             "elapsed_time": self.state.elapsed_time,
             "best_val_loss": self.state.best_val_loss
         }
-        self.experiment_manager.log_metrics(val_record)
+        if self.master_process:
+            self.experiment_manager.log_metrics(val_record)
 
     def _trigger_checkpoint(self, is_best: bool):
         scaler_state = self.scaler.state_dict() if self.scaler else None
         scheduler_state = self.scheduler.state_dict() if self.scheduler else None
         
-        self.checkpoint_manager.save(
-            model_state=self.model.state_dict(),
-            optimizer_state=self.optimizer.state_dict(),
-            scheduler_state=scheduler_state,
-            grad_scaler_state=scaler_state,
-            rng_states=ReproducibilityEngine.capture_rng_states(),
-            iteration=self.state.iteration,
-            metrics={"best_val_loss": self.state.best_val_loss},
-            is_best=is_best
-        )
+        raw_model = self.model.module if hasattr(self.model, "module") else self.model
+        if self.master_process:
+            self.checkpoint_manager.save(
+                model_state=raw_model.state_dict(),
+                optimizer_state=self.optimizer.state_dict(),
+                scheduler_state=scheduler_state,
+                grad_scaler_state=scaler_state,
+                rng_states=ReproducibilityEngine.capture_rng_states(),
+                iteration=self.state.iteration,
+                metrics={"best_val_loss": self.state.best_val_loss},
+                is_best=is_best
+            )
         
         # Sync experiment state
         self.state.to_dict()

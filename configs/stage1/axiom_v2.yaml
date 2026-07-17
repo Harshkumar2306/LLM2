@@ -1,0 +1,12 @@
+base: ../base.yaml
+
+# 32M Parameter Scale
+d_model: 416
+n_layers: 8
+n_heads: 8
+
+# V2 Settings (RoPE added)
+ffn_type: standard
+position_type: rope
+norm_type: layer_norm
+experiment_name: "axiom-v2"

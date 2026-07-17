@@ -16,10 +16,14 @@ class Block(nn.Module):
     """
     def __init__(self, config: GPTConfig):
         super().__init__()
-        
         # Layer Normalizations
-        self.ln_1 = nn.LayerNorm(config.d_model, bias=config.bias)
-        self.ln_2 = nn.LayerNorm(config.d_model, bias=config.bias)
+        if config.norm_type == "rms_norm":
+            from core.rms_norm import RMSNorm
+            self.ln_1 = RMSNorm(config.d_model)
+            self.ln_2 = RMSNorm(config.d_model)
+        else:
+            self.ln_1 = nn.LayerNorm(config.d_model, bias=config.bias)
+            self.ln_2 = nn.LayerNorm(config.d_model, bias=config.bias)
         
         # Core mathematical primitives
         self.attn = CausalSelfAttention(config)

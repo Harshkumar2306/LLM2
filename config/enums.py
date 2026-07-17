@@ -26,4 +26,4 @@ class PositionType(Enum):
 class NormType(Enum):
     """Types of Normalization Layers."""
     LAYER_NORM = "layer_norm"  # Standard nn.LayerNorm
-    # Future: RMS_NORM
+    RMS_NORM = "rms_norm"      # Root Mean Square Normalization

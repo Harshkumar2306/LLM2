@@ -22,9 +22,22 @@ def bootstrap_training(config_path: str, data_dir: str = "data") -> Tuple[Traine
     config_loader = ConfigLoader()
     config = config_loader.load(config_path)
     
+    # DDP Initialization
+    is_ddp = int(os.environ.get('RANK', -1)) != -1
+    if is_ddp:
+        import torch.distributed as dist
+        dist.init_process_group(backend='nccl' if torch.cuda.is_available() else 'gloo')
+        local_rank = int(os.environ['LOCAL_RANK'])
+        if torch.cuda.is_available():
+            torch.cuda.set_device(local_rank)
+            config["device"] = f"cuda:{local_rank}"
+    else:
+        local_rank = 0
+
     # 2. Hardware and Device
     device_manager = DeviceManager(config)
-    device_manager.print_status()
+    if local_rank == 0:
+        device_manager.print_status()
     
     # 3. Experiment and Logging
     exp_name = config.get("experiment_name", "baseline")
@@ -52,17 +65,25 @@ def bootstrap_training(config_path: str, data_dir: str = "data") -> Tuple[Traine
     model = GPT(gpt_config)
     model = device_manager.to_device(model)
     
+    if is_ddp:
+        from torch.nn.parallel import DistributedDataParallel as DDP
+        model = DDP(model, device_ids=[local_rank] if "cuda" in device_manager.device else None)
+        raw_model = model.module
+    else:
+        raw_model = model
+    
     # Print parameter statistics and FLOPs
-    model.print_parameter_statistics()
-    batch_size = config.get("batch_size", 12)
-    flops = model.estimate_flops(batch_size)
-    print(f"Estimated FLOPs per step: {flops:.2e}")
+    if local_rank == 0:
+        raw_model.print_parameter_statistics()
+        batch_size = config.get("batch_size", 12)
+        flops = raw_model.estimate_flops(batch_size)
+        print(f"Estimated FLOPs per step: {flops:.2e}")
     
     # 8. Optimizer
     # Group parameters to exclude 1D params (LayerNorm, biases) from weight decay
     decay_params = []
     no_decay_params = []
-    for n, p in model.named_parameters():
+    for n, p in raw_model.named_parameters():
         if not p.requires_grad:
             continue
         # Biases and 1D parameters (like LayerNorm weights) typically don't use weight decay

@@ -25,7 +25,11 @@ class GPT(nn.Module):
         self.blocks = nn.ModuleList([Block(config) for _ in range(config.n_layers)])
         
         # 3. Final Normalization
-        self.ln_f = nn.LayerNorm(config.d_model, bias=config.bias)
+        if config.norm_type == "rms_norm":
+            from core.rms_norm import RMSNorm
+            self.ln_f = RMSNorm(config.d_model)
+        else:
+            self.ln_f = nn.LayerNorm(config.d_model, bias=config.bias)
         
         # 4. Language Modeling Head (Classifier)
         # Maps the final continuous d_model vector back to discrete vocabulary probabilities

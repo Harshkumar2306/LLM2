@@ -4,10 +4,37 @@ import torch.nn as nn
 from torch.nn import functional as F
 import sys
 import os
+from typing import Tuple
 
 # Ensure config can be imported if run directly
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.gpt_config import GPTConfig
+
+def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0) -> torch.Tensor:
+    freqs = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
+    t = torch.arange(end, dtype=torch.float32)
+    freqs = torch.outer(t, freqs)
+    freqs_cis = torch.polar(torch.ones_like(freqs), freqs)  # complex64
+    return freqs_cis
+
+def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+    ndim = x.ndim
+    assert 0 <= 1 < ndim
+    assert freqs_cis.shape == (x.shape[2], x.shape[-1]) # (T, head_dim//2)
+    shape = [d if i == 2 or i == ndim - 1 else 1 for i, d in enumerate(x.shape)]
+    return freqs_cis.view(*shape)
+
+def apply_rotary_emb(xq: torch.Tensor, xk: torch.Tensor, freqs_cis: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    # xq, xk shape: (B, n_heads, T, head_dim)
+    xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))
+    xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
+    
+    freqs_cis = reshape_for_broadcast(freqs_cis, xq_)
+    
+    xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(3)
+    xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(3)
+    
+    return xq_out.type_as(xq), xk_out.type_as(xk)
 
 class CausalSelfAttention(nn.Module):
     """
@@ -22,6 +49,12 @@ class CausalSelfAttention(nn.Module):
         self.d_model = config.d_model
         self.head_dim = config.d_model // config.n_heads
         self.dropout_p = config.dropout
+        self.position_type = config.position_type
+        
+        if self.position_type == "rope":
+            # Precompute freqs_cis for RoPE
+            freqs_cis = precompute_freqs_cis(self.head_dim, config.context_length)
+            self.register_buffer("freqs_cis", freqs_cis, persistent=False)
         
         # Systems Optimization: Packed QKV projection
         # Instead of 3 sequential GPU kernel launches for Q, K, and V, we launch 1.
@@ -95,6 +128,9 @@ class CausalSelfAttention(nn.Module):
         q = q.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
         k = k.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
         v = v.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
+        
+        if self.position_type == "rope":
+            q, k = apply_rotary_emb(q, k, self.freqs_cis[:T])
         
         # 4. Dispatch to the selected implementation
         if use_flash and hasattr(F, 'scaled_dot_product_attention'):
