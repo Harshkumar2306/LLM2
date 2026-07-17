@@ -5,11 +5,12 @@ def main():
     parser = argparse.ArgumentParser(description="Axiom Training Entrypoint")
     parser.add_argument("--config", type=str, required=True, help="Path to YAML config file")
     parser.add_argument("--data-dir", type=str, default="data", help="Directory containing train.bin and val.bin")
+    parser.add_argument("--resume", type=str, choices=["latest", "best"], default="none", help="Resume from a checkpoint")
     parser.add_argument("--smoke-test", action="store_true", help="Overrides max_iters to 5 for a quick smoke test")
     args = parser.parse_args()
 
     # Build the entire dependency graph
-    trainer, data_manager = bootstrap_training(args.config, args.data_dir)
+    trainer, data_manager = bootstrap_training(args.config, args.data_dir, args.resume)
     
     # Smoke test override
     if args.smoke_test:

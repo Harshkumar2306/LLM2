@@ -13,7 +13,7 @@ from engine.scheduler import LearningRateScheduler
 from core.model import GPT
 from config.gpt_config import GPTConfig
 
-def bootstrap_training(config_path: str, data_dir: str = "data") -> Tuple[Trainer, DataManager]:
+def bootstrap_training(config_path: str, data_dir: str = "data", resume_mode: str = "none") -> Tuple[Trainer, DataManager]:
     """
     Constructs the entire dependency graph for the training pipeline.
     This separates the orchestration of components from the runtime training loop.
@@ -22,6 +22,10 @@ def bootstrap_training(config_path: str, data_dir: str = "data") -> Tuple[Traine
     config_loader = ConfigLoader()
     config = config_loader.load(config_path)
     
+    # Inject CLI overrides
+    if resume_mode != "none":
+        config["resume_mode"] = resume_mode
+        
     # DDP Initialization
     is_ddp = int(os.environ.get('RANK', -1)) != -1
     if is_ddp:
