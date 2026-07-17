@@ -24,6 +24,11 @@ def main():
         train_batch_fetcher=data_manager.get_train_batch,
         val_batch_fetcher=data_manager.get_val_batch
     )
+    
+    # Graceful DDP cleanup
+    import torch.distributed as dist
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 if __name__ == "__main__":
     main()
