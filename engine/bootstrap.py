@@ -41,7 +41,7 @@ def bootstrap_training(config_path: str, data_dir: str = "data") -> Tuple[Traine
     
     # 3. Experiment and Logging
     exp_name = config.get("experiment_name", "baseline")
-    experiment_manager = ExperimentManager("experiments", exp_name, config)
+    experiment_manager = ExperimentManager("experiments", exp_name, config, is_master=(local_rank == 0))
     
     # 4. Checkpoints
     checkpoint_manager = CheckpointManager(experiment_manager.get_experiment_dir(), config)

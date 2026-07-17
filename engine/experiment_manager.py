@@ -14,11 +14,11 @@ class ExperimentManager:
     Central research coordinator for an Axiom experiment.
     Manages the directory structure, structured logging (JSONL), metadata, and summary reports.
     """
-    
-    def __init__(self, base_dir: str, experiment_name: str, config: Dict[str, Any]):
+    def __init__(self, base_dir: str, experiment_name: str, config: Dict[str, Any], is_master: bool = True):
         self.experiment_name = experiment_name
         self.config = config
         self.experiment_dir = os.path.join(base_dir, experiment_name)
+        self.is_master = is_master
         
         self.dirs = {
             "checkpoints": os.path.join(self.experiment_dir, "checkpoints"),
@@ -33,9 +33,10 @@ class ExperimentManager:
         self.metadata_path = os.path.join(self.experiment_dir, "metadata.json")
         self.summary_path = os.path.join(self.experiment_dir, "summary.md")
         
-        self._init_directories()
-        self._init_metadata()
-        self._save_config()
+        if self.is_master:
+            self._init_directories()
+            self._init_metadata()
+            self._save_config()
 
     def _init_directories(self) -> None:
         os.makedirs(self.experiment_dir, exist_ok=True)
