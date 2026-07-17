@@ -1,0 +1,4 @@
+*.pt
+runs/
+checkpoints_test/
+data/*.bin
