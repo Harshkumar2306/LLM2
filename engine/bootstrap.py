@@ -127,16 +127,17 @@ def bootstrap_training(config_path: str, data_dir: str = "data") -> Tuple[Traine
     )
     
     # Optional print for baseline startup check
-    print("\n====================================")
-    print("BASELINE TRAINING STARTUP")
-    print("====================================")
-    print(f"Experiment: {exp_name}")
-    print(f"Device: {device_manager.device.upper()}")
-    print(f"Precision: {device_manager.dtype_str}")
-    print(f"Dataset: {data_dir}")
-    print(f"Context Length: {gpt_config.context_length}")
-    print(f"Batch Size: {batch_size}")
-    print(f"Checkpoint Dir: {experiment_manager.get_experiment_dir()}")
-    print("====================================\n")
+    if local_rank == 0:
+        print("\n====================================")
+        print("BASELINE TRAINING STARTUP")
+        print("====================================")
+        print(f"Experiment: {exp_name}")
+        print(f"Device: {device_manager.device.upper()}")
+        print(f"Precision: {device_manager.dtype_str}")
+        print(f"Dataset: {data_dir}")
+        print(f"Context Length: {gpt_config.context_length}")
+        print(f"Batch Size: {config.get('batch_size', 12)}")
+        print(f"Checkpoint Dir: {experiment_manager.get_experiment_dir()}")
+        print("====================================\n")
     
     return trainer, data_manager
