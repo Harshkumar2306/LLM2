@@ -92,7 +92,7 @@ def process_dataset(config: dict, base_outdir: str, tokenizer: Tokenizer, contex
     
     try:
         kwargs = {'name': subset} if subset != 'default' else {}
-        dataset = load_dataset(hf_path, split=split, streaming=True, **kwargs)
+        dataset = load_dataset(hf_path, split=split, streaming=True, trust_remote_code=True, **kwargs)
     except Exception as e:
         print(f"Error loading {hf_path}: {e}")
         return
