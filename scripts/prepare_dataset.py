@@ -51,6 +51,17 @@ def process_dataset(config: dict, base_outdir: str, tokenizer: Tokenizer, contex
     val_path = os.path.join(out_dir, "val.bin")
     meta_path = os.path.join(out_dir, "metadata.json")
     
+    # Check if already processed
+    if os.path.exists(meta_path):
+        try:
+            with open(meta_path, 'r') as f:
+                meta = json.load(f)
+                if meta.get("tokens", 0) >= target_tokens:
+                    print(f"\n[Skipping] {name} - already fully processed ({meta['tokens']:,} tokens).")
+                    return
+        except json.JSONDecodeError:
+            pass
+    
     # Reset files if starting fresh
     open(train_path, 'wb').close()
     open(val_path, 'wb').close()
