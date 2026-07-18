@@ -103,14 +103,12 @@ class DataManager:
                 # We yield indices forever in chunks. 
                 # To ensure each rank sees different data if shuffling, we just generate random indices.
                 # If not shuffling, we chunk the dataset sequentially.
-                g = torch.Generator()
-                g.manual_seed(self.seed + self.epoch + self.rank)
                 
                 if self.shuffle:
                     while True:
-                        # Yield a batch of random indices
+                        # Yield a batch of random indices using the global PyTorch RNG
                         # We use randint to avoid allocating randperm of size 2.5B
-                        yield int(torch.randint(0, self.total_size, (1,), generator=g).item())
+                        yield int(torch.randint(0, self.total_size, (1,)).item())
                 else:
                     # Sequential chunking
                     chunk_size = self.total_size // self.num_replicas

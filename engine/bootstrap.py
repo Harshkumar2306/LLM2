@@ -38,6 +38,10 @@ def bootstrap_training(config_path: str, data_dir: str = "data", resume_mode: st
     else:
         local_rank = 0
 
+    # Ensure absolute determinism while giving each GPU a unique seed
+    from utils.reproducibility import ReproducibilityEngine
+    ReproducibilityEngine.set_seed(1337 + local_rank)
+    
     # 2. Hardware and Device
     device_manager = DeviceManager(config)
     if local_rank == 0:
