@@ -1,0 +1,16 @@
+datasets:
+  fineweb:
+    path: data/fineweb
+    weight: 0.60
+  stack:
+    path: data/stack
+    weight: 0.20
+  wikipedia:
+    path: data/wikipedia
+    weight: 0.08
+  api_docs:
+    path: data/api_docs
+    weight: 0.08
+  books:
+    path: data/books
+    weight: 0.04

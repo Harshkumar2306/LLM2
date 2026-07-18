@@ -1,0 +1,30 @@
+datasets:
+  - name: fineweb
+    hf: HuggingFaceFW/fineweb-edu
+    subset: sample-10BT
+    split: train
+    tokens: 4500000000
+
+  - name: stack
+    hf: bigcode/the-stack-v2-train-smol
+    subset: default
+    split: train
+    tokens: 1500000000
+    
+  - name: wikipedia
+    hf: wikipedia
+    subset: 20220301.en
+    split: train
+    tokens: 600000000
+
+  - name: api_docs
+    hf: bs-modeling-metadata/c4-en-html-with-metadata
+    subset: default
+    split: train
+    tokens: 600000000
+
+  - name: books
+    hf: pg19
+    subset: default
+    split: train
+    tokens: 300000000
