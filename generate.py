@@ -1,6 +1,6 @@
 import torch
 import argparse
-from core.model import AxiomModel
+from core.model import GPT
 from data.tokenizer import Tokenizer
 import yaml
 
@@ -23,7 +23,7 @@ def generate(model, tokenizer, prompt, max_new_tokens=100, temperature=0.8, top_
                 x_cond = x if x.size(1) <= model.config.context_length else x[:, -model.config.context_length:]
                 
                 # Forward pass
-                logits = model(x_cond)
+                logits, _ = model(x_cond)
                 logits = logits[:, -1, :] # Pluck the logits at the final step
                 
                 # Temperature scaling
@@ -63,7 +63,10 @@ if __name__ == '__main__':
 
     # Load config and initialize model architecture
     config = load_config(args.config)
-    model = AxiomModel(config['model'])
+    
+    from config.gpt_config import GPTConfig
+    model_config = GPTConfig(**config['model'])
+    model = GPT(model_config)
     
     # Load weights
     checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
