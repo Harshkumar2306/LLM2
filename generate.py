@@ -4,10 +4,6 @@ from core.model import GPT
 from data.tokenizer import Tokenizer
 import yaml
 
-def load_config(config_path):
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
-
 def generate(model, tokenizer, prompt, max_new_tokens=100, temperature=0.8, top_k=50, device='cuda'):
     model.eval()
     
@@ -59,13 +55,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    print(f"Loading model on {device}...")
-
-    # Load config and initialize model architecture
-    config = load_config(args.config)
+    from utils.config_loader import ConfigLoader
+    config_loader = ConfigLoader()
+    config = config_loader.load(args.config)
     
+    tokenizer = Tokenizer()
+    config["vocab_size"] = tokenizer.n_vocab
+    
+    from dataclasses import fields
     from config.gpt_config import GPTConfig
-    model_config = GPTConfig(**config['model'])
+    
+    valid_keys = {f.name for f in fields(GPTConfig)}
+    gpt_kwargs = {k: v for k, v in config.items() if k in valid_keys}
+    model_config = GPTConfig(**gpt_kwargs)
     model = GPT(model_config)
     
     # Load weights
