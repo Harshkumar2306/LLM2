@@ -6,14 +6,14 @@ datasets:
     tokens: 4500000000
 
   - name: stack
-    hf: codeparrot/github-code-clean
-    subset: all-all
+    hf: nampdn-ai/tiny-codes
+    subset: default
     split: train
     tokens: 1500000000
     
   - name: wikipedia
-    hf: wikimedia/wikipedia
-    subset: 20231101.en
+    hf: Cohere/wikipedia-22-12-en-embeddings
+    subset: default
     split: train
     tokens: 600000000
 
@@ -24,7 +24,7 @@ datasets:
     tokens: 600000000
 
   - name: books
-    hf: pg19
+    hf: JeanKaddour/minipile
     subset: default
     split: train
     tokens: 300000000

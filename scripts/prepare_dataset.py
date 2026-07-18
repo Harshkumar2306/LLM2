@@ -113,7 +113,7 @@ def process_dataset(config: dict, base_outdir: str, tokenizer: Tokenizer, contex
         stats["docs_streamed"] += 1
         
         # Try to extract text field (hf datasets use various keys)
-        text = doc.get("text", doc.get("content", doc.get("document", doc.get("code", ""))))
+        text = doc.get("text", doc.get("content", doc.get("document", doc.get("response", ""))))
         
         # 1. Cleaning
         if not text or not text.strip():
