@@ -5,7 +5,7 @@ d_model: 416
 n_layers: 8
 n_heads: 8
 
-# V3 Settings (RoPE + SwiGLU + RMSNorm)
+# V3 Settings (Llama-2 Architecture)
 ffn_type: swiglu
 position_type: rope
 norm_type: rms_norm
