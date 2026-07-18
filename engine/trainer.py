@@ -81,6 +81,9 @@ class Trainer:
             if "training_progress" in checkpoint:
                 self.state.load_dict(checkpoint["training_progress"])
                 
+            if "metrics" in checkpoint and "best_val_loss" in checkpoint["metrics"]:
+                self.state.best_val_loss = checkpoint["metrics"]["best_val_loss"]
+                
             print(f"[Trainer] Resumed from iteration {self.state.iteration} with best val loss {self.state.best_val_loss}")
         except Exception as e:
             print(f"[Trainer] Could not resume: {e}. Starting fresh.")
