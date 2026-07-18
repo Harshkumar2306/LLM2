@@ -251,7 +251,7 @@ class Trainer:
                 
         except KeyboardInterrupt:
             if self.master_process:
-                print("\n[Trainer] KeyboardInterrupt (Stop/Pause) detected! Gracefully saving checkpoint...")
+                print("\n[Trainer] KeyboardInterrupt (Stop/Pause) detected! Gracefully saving checkpoint...", flush=True)
             self.after_train()
             import sys
             sys.exit(0)

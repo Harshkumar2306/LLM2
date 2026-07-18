@@ -179,8 +179,8 @@ class ExperimentManager:
         with open(self.summary_path, 'w', encoding='utf-8') as f:
             f.write(md_content)
             
-        print("\n" + "="*50)
-        print("EXPERIMENT COMPLETED")
-        print("="*50)
-        print(md_content)
-        print("="*50 + "\n")
+        print("\n" + "="*50, flush=True)
+        print("EXPERIMENT COMPLETED", flush=True)
+        print("="*50, flush=True)
+        print(md_content, flush=True)
+        print("="*50 + "\n", flush=True)
