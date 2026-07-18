@@ -14,6 +14,7 @@ class FFNType(Enum):
 class AttentionType(Enum):
     """Types of Attention Mechanisms."""
     MHA = "mha"  # Multi-Head Attention
+    GQA = "gqa"  # Grouped-Query Attention
 
 
 class PositionType(Enum):

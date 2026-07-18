@@ -9,4 +9,6 @@ n_heads: 8
 ffn_type: swiglu
 position_type: rope
 norm_type: rms_norm
+attention_type: gqa
+n_kv_heads: 2
 experiment_name: "axiom-v3"

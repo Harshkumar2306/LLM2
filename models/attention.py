@@ -9,6 +9,7 @@ from typing import Tuple
 # Ensure config can be imported if run directly
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.gpt_config import GPTConfig
+from config.enums import AttentionType
 
 def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0) -> torch.Tensor:
     freqs = 1.0 / (theta ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
@@ -25,40 +26,52 @@ def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor) -> torch.Ten
     return freqs_cis.view(*shape)
 
 def apply_rotary_emb(xq: torch.Tensor, xk: torch.Tensor, freqs_cis: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-    # xq, xk shape: (B, n_heads, T, head_dim)
+    # xq, xk shape: (B, num_heads, T, head_dim)
     xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))
     xk_ = torch.view_as_complex(xk.float().reshape(*xk.shape[:-1], -1, 2))
     
-    freqs_cis = reshape_for_broadcast(freqs_cis, xq_)
+    freqs_cis_q = reshape_for_broadcast(freqs_cis, xq_)
+    freqs_cis_k = reshape_for_broadcast(freqs_cis, xk_)
     
-    xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(3)
-    xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(3)
+    xq_out = torch.view_as_real(xq_ * freqs_cis_q).flatten(3)
+    xk_out = torch.view_as_real(xk_ * freqs_cis_k).flatten(3)
     
     return xq_out.type_as(xq), xk_out.type_as(xk)
 
 class CausalSelfAttention(nn.Module):
     """
-    Multi-Head Causal Self-Attention mechanism.
+    Multi-Head & Grouped-Query Causal Self-Attention mechanism.
     Routes information between tokens while strictly preventing future-peeking.
     """
     def __init__(self, config: GPTConfig):
         super().__init__()
         assert config.d_model % config.n_heads == 0, "d_model must be divisible by n_heads"
         
+        self.attention_type = config.attention_type
         self.n_heads = config.n_heads
         self.d_model = config.d_model
         self.head_dim = config.d_model // config.n_heads
+        
+        if self.attention_type == AttentionType.GQA:
+            self.n_kv_heads = config.n_kv_heads
+        else:
+            self.n_kv_heads = self.n_heads
+            
+        self.num_repeats = self.n_heads // self.n_kv_heads
         self.dropout_p = config.dropout
         self.position_type = config.position_type
         
-        if self.position_type == "rope":
+        if self.position_type.value == "rope":
             # Precompute freqs_cis for RoPE
             freqs_cis = precompute_freqs_cis(self.head_dim, config.context_length)
             self.register_buffer("freqs_cis", freqs_cis, persistent=False)
         
-        # Systems Optimization: Packed QKV projection
-        # Instead of 3 sequential GPU kernel launches for Q, K, and V, we launch 1.
-        self.c_attn = nn.Linear(config.d_model, 3 * config.d_model, bias=config.bias)
+        # QKV projection
+        # Q size = n_heads * head_dim (d_model)
+        # K size = n_kv_heads * head_dim
+        # V size = n_kv_heads * head_dim
+        self.qkv_dim = self.d_model + 2 * (self.n_kv_heads * self.head_dim)
+        self.c_attn = nn.Linear(config.d_model, self.qkv_dim, bias=config.bias)
         
         # Output projection
         self.c_proj = nn.Linear(config.d_model, config.d_model, bias=config.bias)
@@ -117,20 +130,25 @@ class CausalSelfAttention(nn.Module):
         B, T, C = x.size()
         
         # 1. Packed QKV projection
-        # (B, T, C) -> (B, T, 3 * C)
+        # (B, T, C) -> (B, T, d_model + 2*kv_dim)
         qkv = self.c_attn(x)
         
         # 2. Slice the packed tensor into Query, Key, Value
-        q, k, v = qkv.split(self.d_model, dim=2)
+        q, k, v = qkv.split([self.d_model, self.n_kv_heads * self.head_dim, self.n_kv_heads * self.head_dim], dim=2)
         
-        # 3. Reshape for Multi-Head Attention
-        # (B, T, C) -> (B, T, n_heads, head_dim) -> transpose -> (B, n_heads, T, head_dim)
+        # 3. Reshape for Attention
+        # (B, T, n_heads, head_dim) -> transpose -> (B, n_heads, T, head_dim)
         q = q.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
-        k = k.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
-        v = v.view(B, T, self.n_heads, self.head_dim).transpose(1, 2)
+        k = k.view(B, T, self.n_kv_heads, self.head_dim).transpose(1, 2)
+        v = v.view(B, T, self.n_kv_heads, self.head_dim).transpose(1, 2)
         
-        if self.position_type == "rope":
+        if self.position_type.value == "rope":
             q, k = apply_rotary_emb(q, k, self.freqs_cis[:T])
+            
+        # If GQA, repeat K and V to match Q's n_heads
+        if self.num_repeats > 1:
+            k = torch.repeat_interleave(k, repeats=self.num_repeats, dim=1)
+            v = torch.repeat_interleave(v, repeats=self.num_repeats, dim=1)
         
         # 4. Dispatch to the selected implementation
         if use_flash and hasattr(F, 'scaled_dot_product_attention'):

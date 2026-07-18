@@ -21,6 +21,7 @@ class GPTConfig:
     position_type: PositionType
     norm_type: NormType
     
+    n_kv_heads: Optional[int] = None
     dropout: float = 0.1
     bias: bool = True
     fingerprint: Optional[str] = None
@@ -45,6 +46,15 @@ class GPTConfig:
                 f"divisible by the number of heads (n_heads={self.n_heads}). "
                 f"This ensures we can split the embedding vector equally across heads."
             )
+            
+        if self.attention_type == AttentionType.GQA:
+            if self.n_kv_heads is None:
+                raise ValueError("n_kv_heads must be specified for GQA.")
+            if self.n_heads % self.n_kv_heads != 0:
+                raise ValueError("n_heads must be perfectly divisible by n_kv_heads for GQA.")
+        else:
+            if self.n_kv_heads is not None:
+                raise ValueError("n_kv_heads should only be specified for GQA.")
 
         # 2. Structural requirements
         if self.d_model <= 0:

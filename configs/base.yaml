@@ -1,7 +1,7 @@
 vocab_size: 50257
 context_length: 1024
 dropout: 0.1
-bias: true
+bias: false
 ffn_type: standard
 attention_type: mha
 position_type: absolute
