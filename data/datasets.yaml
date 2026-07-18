@@ -17,11 +17,11 @@ datasets:
     split: train
     tokens: 600000000
 
-  - name: api_docs
-    hf: bs-modeling-metadata/c4-en-html-with-metadata
-    subset: default
-    split: train
+  - name: "api_docs"
+    hf: "HuggingFaceH4/ultrachat_200k"
+    split: "train_sft"
     tokens: 600000000
+    dedup: true
 
   - name: books
     hf: JeanKaddour/minipile

@@ -115,6 +115,18 @@ def process_dataset(config: dict, base_outdir: str, tokenizer: Tokenizer, contex
         # Try to extract text field (hf datasets use various keys)
         text = doc.get("text", doc.get("content", doc.get("document", doc.get("code", ""))))
         
+        # If no standard text field, try conversational/instruction formats
+        if not text:
+            if "messages" in doc and isinstance(doc["messages"], list):
+                # UltraChat / ChatML format
+                text = "\n".join([m.get("content", "") for m in doc["messages"] if isinstance(m, dict)])
+            elif "instruction" in doc and "output" in doc:
+                # Alpaca format
+                text = f"{doc.get('instruction', '')}\n{doc.get('input', '')}\n{doc.get('output', '')}"
+            elif "question" in doc and "response" in doc:
+                # OpenOrca format
+                text = f"{doc.get('system_prompt', '')}\n{doc.get('question', '')}\n{doc.get('response', '')}"
+        
         # 1. Cleaning
         if not text or not text.strip():
             stats["docs_rejected_empty"] += 1
