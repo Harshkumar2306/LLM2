@@ -195,57 +195,65 @@ class Trainer:
         self.val_batch_fetcher = val_batch_fetcher
         self.before_train()
         
-        while self.state.iteration < self.max_iters:
-            self.before_step()
-            
-            # Fetch and place data
-            x, y = train_batch_fetcher()
-            x, y = self.device_manager.to_device(x, y)
-            
-            # --- THE OPTIMIZATION PIPELINE ---
-            
-            # 1. Forward
-            with self.device_manager.autocast():
-                logits, loss = self.model(x, targets=y)
+        try:
+            while self.state.iteration < self.max_iters:
+                self.before_step()
                 
-            self.current_loss = loss.item()
+                # Fetch and place data
+                x, y = train_batch_fetcher()
+                x, y = self.device_manager.to_device(x, y)
                 
-            # 2. Loss Scaling
-            if self.scaler:
-                self.scaler.scale(loss).backward() # 3. Backward
+                # --- THE OPTIMIZATION PIPELINE ---
                 
-                # 4. Gradient Unscaling & Clipping
-                if self.grad_clip > 0:
-                    self.scaler.unscale_(self.optimizer)
-                    self.state.gradient_norm = torch.nn.utils.clip_grad_norm_(
-                        self.model.parameters(), self.grad_clip
-                    ).item()
+                # 1. Forward
+                with self.device_manager.autocast():
+                    logits, loss = self.model(x, targets=y)
                     
-                # 5. Optimizer Step
-                scale_before = self.scaler.get_scale()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-                scale_after = self.scaler.get_scale()
-                optimizer_step_was_skipped = scale_after < scale_before
-            else:
-                loss.backward() # 3. Backward
-                if self.grad_clip > 0:
-                    self.state.gradient_norm = torch.nn.utils.clip_grad_norm_(
-                        self.model.parameters(), self.grad_clip
-                    ).item()
-                self.optimizer.step() # 5. Optimizer Step
-                optimizer_step_was_skipped = False
+                self.current_loss = loss.item()
+                    
+                # 2. Loss Scaling
+                if self.scaler:
+                    self.scaler.scale(loss).backward() # 3. Backward
+                    
+                    # 4. Gradient Unscaling & Clipping
+                    if self.grad_clip > 0:
+                        self.scaler.unscale_(self.optimizer)
+                        self.state.gradient_norm = torch.nn.utils.clip_grad_norm_(
+                            self.model.parameters(), self.grad_clip
+                        ).item()
+                        
+                    # 5. Optimizer Step
+                    scale_before = self.scaler.get_scale()
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                    scale_after = self.scaler.get_scale()
+                    optimizer_step_was_skipped = scale_after < scale_before
+                else:
+                    loss.backward() # 3. Backward
+                    if self.grad_clip > 0:
+                        self.state.gradient_norm = torch.nn.utils.clip_grad_norm_(
+                            self.model.parameters(), self.grad_clip
+                        ).item()
+                    self.optimizer.step() # 5. Optimizer Step
+                    optimizer_step_was_skipped = False
+                    
+                # 6. Scheduler Step
+                # Only advance the learning rate if the optimizer successfully updated weights.
+                if self.scheduler and not optimizer_step_was_skipped:
+                    self.scheduler.step(self.state)
                 
-            # 6. Scheduler Step
-            # Only advance the learning rate if the optimizer successfully updated weights.
-            if self.scheduler and not optimizer_step_was_skipped:
-                self.scheduler.step(self.state)
-            
-            # 7. Zero Grad
-            self.optimizer.zero_grad(set_to_none=True)
-            
-            self.state.iteration += 1
-            self.state.global_step += 1
-            self.after_step()
+                # 7. Zero Grad
+                self.optimizer.zero_grad(set_to_none=True)
+                
+                self.state.iteration += 1
+                self.state.global_step += 1
+                self.after_step()
+                
+        except KeyboardInterrupt:
+            if self.master_process:
+                print("\n[Trainer] KeyboardInterrupt (Stop/Pause) detected! Gracefully saving checkpoint...")
+            self.after_train()
+            import sys
+            sys.exit(0)
             
         self.after_train()
