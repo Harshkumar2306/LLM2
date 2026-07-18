@@ -12,8 +12,8 @@ datasets:
     tokens: 1500000000
     
   - name: wikipedia
-    hf: wikipedia
-    subset: 20220301.en
+    hf: wikimedia/wikipedia
+    subset: 20231101.en
     split: train
     tokens: 600000000
 
