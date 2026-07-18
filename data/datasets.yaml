@@ -6,7 +6,7 @@ datasets:
     tokens: 4500000000
 
   - name: stack
-    hf: nampdn-ai/tiny-codes
+    hf: vikp/starcoder_cleaned
     subset: default
     split: train
     tokens: 1500000000
