@@ -95,21 +95,21 @@ Axiom/
 
 ---
 
-# 📌 Phase 1 — Architecture Research
+# 📌 Phase 1A — Architecture Screening
 
 ### Objective
 
-Find the strongest architecture before scaling to 100M parameters.
+Find the strongest architectures before committing to longer training runs.
 
 ---
 
-## Training Configuration
+## Screening Configuration
 
 | Setting        | Value                     |
 | -------------- | ------------------------- |
 | Dataset        | Axiom Dataset v1 (15 GB)  |
 | Model Size     | 37M Parameters            |
-| Training Steps | 10,000                    |
+| Training Steps | 2,000                     |
 | Tokenizer      | GPT-2 / tiktoken          |
 | Optimizer      | AdamW                     |
 | Scheduler      | Warmup + Cosine Decay     |
@@ -127,6 +127,7 @@ Vanilla GPT
 * Learned Positional Embeddings
 * LayerNorm
 * GELU
+* Bias=True
 
 ---
 
@@ -137,6 +138,7 @@ RoPE GPT
 * RoPE
 * LayerNorm
 * GELU
+* Bias=True
 
 ---
 
@@ -147,6 +149,8 @@ Modern GPT (Llama-style)
 * RoPE
 * RMSNorm
 * SwiGLU
+* Grouped-Query Attention (GQA)
+* Bias=False
 
 ---
 
@@ -154,15 +158,48 @@ Modern GPT (Llama-style)
 
 Measure
 
-* Training Loss
 * Validation Loss
-* Best Validation Loss
 * Perplexity
-* Tokens/sec
-* GPU Memory
-* Training Time
+* Training Stability
+* Throughput (tokens/sec)
+
+---
+
+### Outcome
+
+↓
+
+**Eliminate the weakest architecture**
+
+---
+
+# 📌 Phase 1B — Architecture Confirmation
+
+### Objective
+
+Run the top 2 architectures for longer to confidently confirm the winner.
+
+---
+
+## Confirmation Configuration
+
+| Setting        | Value                     |
+| -------------- | ------------------------- |
+| Architectures  | Top 2 from Phase 1A       |
+| Model Size     | 37M Parameters            |
+| Training Steps | 5,000                     |
+
+---
+
+## Evaluation Metrics
+
+Measure again:
+
+* Validation Loss
+* Perplexity
 * Stability
-* Inference Speed
+* GPU Memory
+* Training Speed
 
 ---
 
