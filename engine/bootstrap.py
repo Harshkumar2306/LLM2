@@ -86,6 +86,15 @@ def bootstrap_training(config_path: str, data_dir: str = "data", resume_mode: st
         batch_size = config.get("batch_size", 12)
         flops = raw_model.estimate_flops(batch_size)
         print(f"Estimated FLOPs per step: {flops:.2e}")
+        
+        # Inject precise stats into metadata for the final summary
+        total_params = sum(p.numel() for p in raw_model.parameters())
+        param_str = f"{total_params / 1e6:.2f} M"
+        experiment_manager.update_metadata({
+            "parameter_count": param_str,
+            "dataset_size_tokens": data_manager.num_train_tokens(),
+            "max_iterations": config.get("max_iters", 1000)
+        })
     
     # 8. Optimizer
     # Group parameters to exclude 1D params (LayerNorm, biases) from weight decay

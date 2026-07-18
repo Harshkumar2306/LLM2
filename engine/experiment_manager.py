@@ -147,6 +147,7 @@ class ExperimentManager:
                     final_train_loss = last_record.get("train_loss", "N/A")
                     best_val_loss = last_record.get("best_val_loss", "N/A")
                     total_time = last_record.get("elapsed_time", "N/A")
+                    final_iteration = last_record.get("iteration", "N/A")
                 
         md_content = f"# Experiment Summary: {self.experiment_name}\n\n"
         md_content += f"**Experiment ID:** `{meta.get('experiment_id', 'N/A')}`\n"
@@ -156,12 +157,16 @@ class ExperimentManager:
         md_content += "## Model Overview\n"
         md_content += f"- **Architecture:** {meta.get('architecture_name', 'N/A')}\n"
         md_content += f"- **Parameters:** {meta.get('parameter_count', 'N/A')}\n"
-        md_content += f"- **Dataset:** {meta.get('dataset_name', 'N/A')}\n\n"
+        md_content += f"- **Dataset:** {meta.get('dataset_name', 'N/A')}\n"
+        ds_size = meta.get('dataset_size_tokens', 'N/A')
+        ds_size_str = f"{ds_size:,}" if isinstance(ds_size, int) else ds_size
+        md_content += f"- **Dataset Size:** {ds_size_str} tokens\n\n"
         
         md_content += "## Configuration Summary\n"
         md_content += f"**Fingerprint:** `{meta.get('config_fingerprint', 'N/A')}`\n"
         
         md_content += "\n## Training Results\n"
+        md_content += f"- **Final Iteration Reached:** {final_iteration}\n"
         md_content += f"- **Best Validation Loss:** {best_val_loss}\n"
         md_content += f"- **Final Training Loss:** {final_train_loss}\n"
         md_content += f"- **Total Training Time (s):** {total_time}\n"
