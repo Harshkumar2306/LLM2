@@ -1,0 +1,14 @@
+base: ../base.yaml
+
+# Phase 1A: 37M Parameter Scale, 2K Steps
+d_model: 416
+n_layers: 8
+n_heads: 8
+max_iters: 2000
+lr_decay_iters: 2000
+
+# V2 Settings (RoPE GPT)
+position_type: rope
+norm_type: layer_norm
+bias: true
+experiment_name: "axiom-phase1a-v2"

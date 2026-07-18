@@ -1,0 +1,11 @@
+base: ../base.yaml
+
+# Phase 1B: 37M Parameter Scale, 5K Steps
+d_model: 416
+n_layers: 8
+n_heads: 8
+max_iters: 5000
+lr_decay_iters: 5000
+
+# To be filled with the settings of the winning architecture from Phase 1A
+experiment_name: "axiom-phase1b-top_arch"
