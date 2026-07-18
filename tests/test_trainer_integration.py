@@ -1,3 +1,4 @@
+from tests.helpers import get_test_config
 import os
 import json
 import torch
@@ -5,12 +6,12 @@ import torch.nn as nn
 import pytest
 import glob
 
-from engine.training_state import TrainingState
-from engine.trainer import Trainer
-from engine.device_manager import DeviceManager
-from engine.checkpoint_manager import CheckpointManager
-from engine.experiment_manager import ExperimentManager
-from engine.validation_manager import ValidationManager
+from trainer.training_state import TrainingState
+from trainer.trainer import Trainer
+from trainer.device_manager import DeviceManager
+from trainer.checkpoint_manager import CheckpointManager
+from trainer.experiment_manager import ExperimentManager
+from trainer.validation_manager import ValidationManager
 
 class MockModel(nn.Module):
     def __init__(self):

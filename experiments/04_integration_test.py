@@ -9,8 +9,8 @@ from torch.utils.data import Dataset, DataLoader
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.gpt_config import GPTConfig
-from core.model import GPT
-from engine.trainer import Trainer, TrainerConfig
+from models.model import GPT
+from trainer.trainer import Trainer, TrainerConfig
 
 # A tiny excerpt of real text
 TINY_CORPUS = """

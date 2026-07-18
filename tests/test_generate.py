@@ -1,7 +1,7 @@
 from tests.helpers import get_test_config
 import torch
 from config.gpt_config import GPTConfig
-from core.model import GPT
+from models.model import GPT
 
 def test_generate():
     torch.manual_seed(42)

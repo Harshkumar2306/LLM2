@@ -6,7 +6,7 @@ from typing import Dict, Any, Tuple, Iterator, List
 from torch.utils.data import DataLoader, ConcatDataset
 
 from data.dataset import MemmapStorage, GPTDataset
-from data.tokenizer import Tokenizer
+from tokenizer.tokenizer import Tokenizer
 
 def _infinite_iterator(dataloader: DataLoader, sampler=None) -> Iterator[Tuple[torch.Tensor, torch.Tensor]]:
     """Yields batches forever."""

@@ -5,8 +5,8 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.gpt_config import GPTConfig
-from core.embeddings import GPTEmbeddings
-from core.block import Block
+from models.embeddings import GPTEmbeddings
+from models.block import Block
 
 class GPT(nn.Module):
     """
@@ -26,7 +26,7 @@ class GPT(nn.Module):
         
         # 3. Final Normalization
         if config.norm_type == "rms_norm":
-            from core.rms_norm import RMSNorm
+            from models.rms_norm import RMSNorm
             self.ln_f = RMSNorm(config.d_model)
         else:
             self.ln_f = nn.LayerNorm(config.d_model, bias=config.bias)

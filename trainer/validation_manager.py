@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from typing import Dict, Any, Callable
-from engine.device_manager import DeviceManager
+from trainer.device_manager import DeviceManager
 
 class ValidationManager:
     """

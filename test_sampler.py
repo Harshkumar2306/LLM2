@@ -3,7 +3,7 @@ import os
 from collections import Counter
 import torch
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from engine.data_manager import WeightedDistributedSampler
+from trainer.data_manager import WeightedDistributedSampler
 
 def test_sampler():
     print("Testing WeightedDistributedSampler Distribution...\n")

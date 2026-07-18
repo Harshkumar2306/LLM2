@@ -3,14 +3,14 @@ import torch
 from typing import Dict, Any, Tuple
 
 from utils.config_loader import ConfigLoader
-from engine.device_manager import DeviceManager
-from engine.experiment_manager import ExperimentManager
-from engine.checkpoint_manager import CheckpointManager
-from engine.validation_manager import ValidationManager
-from engine.data_manager import DataManager
-from engine.trainer import Trainer
-from engine.scheduler import LearningRateScheduler
-from core.model import GPT
+from trainer.device_manager import DeviceManager
+from trainer.experiment_manager import ExperimentManager
+from trainer.checkpoint_manager import CheckpointManager
+from trainer.validation_manager import ValidationManager
+from trainer.data_manager import DataManager
+from trainer.trainer import Trainer
+from trainer.scheduler import LearningRateScheduler
+from models.model import GPT
 from config.gpt_config import GPTConfig
 
 def bootstrap_training(config_path: str, data_dir: str = "data", resume_mode: str = "none") -> Tuple[Trainer, DataManager]:

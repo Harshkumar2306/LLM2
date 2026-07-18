@@ -1,8 +1,9 @@
+from tests.helpers import get_test_config
 import torch
 import torch.nn as nn
 import pytest
-from engine.device_manager import DeviceManager
-from engine.validation_manager import ValidationManager
+from trainer.device_manager import DeviceManager
+from trainer.validation_manager import ValidationManager
 from utils.config_loader import ConfigLoader
 
 class MockModel(nn.Module):

@@ -1,8 +1,9 @@
+from tests.helpers import get_test_config
 import os
 import torch
 import shutil
 import pytest
-from engine.checkpoint_manager import CheckpointManager, ConfigurationMismatchError
+from trainer.checkpoint_manager import CheckpointManager, ConfigurationMismatchError
 
 @pytest.fixture
 def experiment_dir(tmp_path):

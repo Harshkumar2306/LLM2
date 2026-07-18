@@ -1,8 +1,8 @@
 from tests.helpers import get_test_config
 import torch
 from config.gpt_config import GPTConfig
-from core.ffn import FeedForward
-from core.embeddings import GPTEmbeddings
+from models.ffn import FeedForward
+from models.embeddings import GPTEmbeddings
 
 def test_ffn_shape():
     """

@@ -5,8 +5,8 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.gpt_config import GPTConfig
-from core.attention import CausalSelfAttention
-from core.ffn import FeedForward
+from models.attention import CausalSelfAttention
+from models.ffn import FeedForward
 
 class Block(nn.Module):
     """
@@ -18,7 +18,7 @@ class Block(nn.Module):
         super().__init__()
         # Layer Normalizations
         if config.norm_type == "rms_norm":
-            from core.rms_norm import RMSNorm
+            from models.rms_norm import RMSNorm
             self.ln_1 = RMSNorm(config.d_model)
             self.ln_2 = RMSNorm(config.d_model)
         else:

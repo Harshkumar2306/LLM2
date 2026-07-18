@@ -7,7 +7,7 @@ import os
 # Ensure config can be imported if run directly
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.gpt_config import GPTConfig
-from core.attention import CausalSelfAttention
+from models.attention import CausalSelfAttention
 
 def test_attention_shape():
     """

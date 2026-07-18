@@ -1,7 +1,7 @@
 import torch
 import argparse
-from core.model import GPT
-from data.tokenizer import Tokenizer
+from models.model import GPT
+from tokenizer.tokenizer import Tokenizer
 import yaml
 
 def generate(model, tokenizer, prompt, max_new_tokens=100, temperature=0.8, top_k=50, device='cuda'):

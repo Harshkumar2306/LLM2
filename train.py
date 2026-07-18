@@ -1,5 +1,5 @@
 import argparse
-from engine.bootstrap import bootstrap_training
+from trainer.bootstrap import bootstrap_training
 
 def main():
     parser = argparse.ArgumentParser(description="Axiom Training Entrypoint")

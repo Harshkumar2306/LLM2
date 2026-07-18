@@ -9,9 +9,9 @@ from torch.utils.data import DataLoader
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.gpt_config import GPTConfig
-from core.model import GPT
+from models.model import GPT
 from data.dataset import GPTDataset, InMemoryStorage
-from engine.trainer import Trainer, TrainerConfig
+from trainer.trainer import Trainer, TrainerConfig
 
 def parse_args():
     parser = argparse.ArgumentParser()

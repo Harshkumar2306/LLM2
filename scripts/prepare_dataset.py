@@ -17,7 +17,7 @@ import numpy as np
 from datasets import load_dataset
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from data.tokenizer import Tokenizer
+from tokenizer.tokenizer import Tokenizer
 
 def clean_text(text: str, min_chars: int = 100) -> bool:
     """Lightweight cleaning rule."""
