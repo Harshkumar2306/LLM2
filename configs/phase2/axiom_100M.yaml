@@ -1,0 +1,24 @@
+base: ../base.yaml
+
+# Phase 2: ~114M Parameter Production Run
+# Based on the winning V3 (Llama-style) Architecture
+
+# Architecture
+d_model: 768
+n_layers: 12
+n_heads: 12
+ffn_type: swiglu
+position_type: rope
+norm_type: rms_norm
+attention_type: gqa
+n_kv_heads: 4
+bias: false
+
+# Training 
+batch_size: 16
+learning_rate: 0.0004
+max_iters: 100000
+lr_decay_iters: 100000
+
+# Experiment Name
+experiment_name: "axiom-phase2-100m"
