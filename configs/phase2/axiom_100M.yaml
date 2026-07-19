@@ -15,7 +15,7 @@ n_kv_heads: 4
 bias: false
 
 # Training 
-batch_size: 16
+batch_size: 4
 learning_rate: 0.0004
 max_iters: 100000
 lr_decay_iters: 100000

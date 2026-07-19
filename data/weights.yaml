@@ -8,8 +8,8 @@ datasets:
   wikipedia:
     path: data/wikipedia
     weight: 0.08
-  api_docs:
-    path: data/api_docs
+  technical:
+    path: data/technical
     weight: 0.08
   books:
     path: data/books
