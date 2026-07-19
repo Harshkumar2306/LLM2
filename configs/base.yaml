@@ -20,7 +20,7 @@ min_lr: 6.0e-05
 device: auto
 dtype: auto
 val_interval: 500
-checkpoint_interval: 1000
+checkpoint_interval: 500
 eval_iters: 100
 checkpoint:
   keep_last: 1
