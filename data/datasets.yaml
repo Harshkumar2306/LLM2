@@ -11,7 +11,8 @@ datasets:
     tokens: 1500000000
 
   - name: "wikipedia"
-    hf: "Cohere/wikipedia-22-12-en-embeddings"
+    hf: "wikimedia/wikipedia"
+    subset: "20231101.en"
     split: "train"
     tokens: 750000000
 
