@@ -1,30 +1,27 @@
 datasets:
-  - name: fineweb
-    hf: HuggingFaceFW/fineweb-edu
-    subset: sample-10BT
-    split: train
-    tokens: 4500000000
+  - name: "fineweb"
+    hf: "HuggingFaceFW/fineweb-edu"
+    subset: "sample-10BT"
+    split: "train"
+    tokens: 4125000000
 
-  - name: stack
-    hf: vikp/starcoder_cleaned
-    subset: default
-    split: train
+  - name: "stack"
+    hf: "vikp/starcoder_cleaned"
+    split: "train"
     tokens: 1500000000
-    
-  - name: wikipedia
-    hf: Cohere/wikipedia-22-12-en-embeddings
-    subset: default
-    split: train
-    tokens: 600000000
 
-  - name: "api_docs"
-    hf: "HuggingFaceH4/ultrachat_200k"
-    split: "train_sft"
-    tokens: 600000000
+  - name: "wikipedia"
+    hf: "Cohere/wikipedia-22-12-en-embeddings"
+    split: "train"
+    tokens: 750000000
+
+  - name: "technical"
+    hf: "Open-Orca/OpenOrca"
+    split: "train"
+    tokens: 750000000
     dedup: true
 
-  - name: books
-    hf: JeanKaddour/minipile
-    subset: default
-    split: train
-    tokens: 300000000
+  - name: "books"
+    hf: "JeanKaddour/minipile"
+    split: "train"
+    tokens: 375000000
