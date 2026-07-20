@@ -42,9 +42,9 @@ class Trainer:
         
         # Extract training configurations (from flat config)
         self.max_iters = self.config.get("max_iters", 1000)
-        self.eval_interval = self.config.get("eval_interval", 100)
+        self.eval_interval = self.config.get("val_interval", 100)
         self.eval_iters = self.config.get("eval_iters", 10)
-        self.save_interval = self.config.get("save_interval", 100)
+        self.save_interval = self.config.get("checkpoint_interval", 100)
         self.log_interval = self.config.get("log_interval", 10)
         self.grad_clip = self.config.get("grad_clip", 1.0)
         
