@@ -28,7 +28,7 @@ Build a **high-quality, modular, reproducible 15 GB dataset** that can be dynami
 
 ### Objective
 
-Train the production-quality foundation model.
+Train thee production-quality foundation model.
 
 ---
 
