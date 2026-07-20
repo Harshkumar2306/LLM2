@@ -23,4 +23,4 @@ val_interval: 500
 checkpoint_interval: 500
 eval_iters: 100
 checkpoint:
-  keep_last: 1
+  keep_last: 3
