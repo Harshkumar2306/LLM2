@@ -1,4 +1,4 @@
-# 🚀 Axiom Foundation v1.0 Roadmap
+# 🚀 Axiom Foundation 
 
 A research-first roadmap to build a production-quality foundation language model.
 
