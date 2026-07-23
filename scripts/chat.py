@@ -59,7 +59,7 @@ def main():
     print("="*50 + "\n")
     
     def generate_response(user_text):
-        prompt = f"<|system|>\nYou are Axiom, a helpful AI assistant.\n<|user|>\n{user_text}\n<|assistant|>\n"
+        prompt = f"<|system|>\nYou are Axiom, a helpful AI assistant.<|end|>\n<|user|>\n{user_text}<|end|>\n<|assistant|>\n"
         tokens = tokenizer.encode(prompt)
         x = torch.tensor([tokens], dtype=torch.long, device=device)
         
