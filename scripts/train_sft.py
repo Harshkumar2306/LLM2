@@ -111,6 +111,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--checkpoint', type=str, required=True, help="Path to best.pt")
     parser.add_argument('--yaml', type=str, required=True, help="Path to run_config.yaml")
+    parser.add_argument('--dataset', type=str, default='sft_v2_dataset', help="Dataset folder name")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -139,7 +140,7 @@ def main():
     model.load_state_dict(checkpoint['model_state'])
     model.to(device)
     
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sft_dataset")
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", args.dataset)
     with open(os.path.join(data_dir, "meta.json"), "r") as f:
         meta = json.load(f)
         
@@ -171,8 +172,8 @@ def main():
     # Mixed precision scaler
     scaler = GradScaler("cuda", enabled=torch.cuda.is_available())
     
-    max_steps = steps_per_epoch
-    eval_interval = max(1, min(500, max_steps // 5))
+    max_steps = 15000
+    eval_interval = 500
     
     out_dir = os.path.join(os.path.dirname(args.checkpoint), "sft")
     os.makedirs(out_dir, exist_ok=True)
@@ -182,6 +183,8 @@ def main():
     
     t0 = time.time()
     best_val_loss = float('inf')
+    patience_counter = 0
+    patience = 5
     
     train_iter = iter(train_loader)
     
@@ -193,10 +196,16 @@ def main():
             
             if losses['val'] < best_val_loss:
                 best_val_loss = losses['val']
+                patience_counter = 0
                 save_path = os.path.join(out_dir, "sft_best.pt")
                 model_to_save = model.module if hasattr(model, 'module') else model
                 torch.save({'model_state': model_to_save.state_dict()}, save_path)
                 print(f"--> Saved best model to {save_path}")
+            else:
+                patience_counter += 1
+                if patience_counter >= patience:
+                    print(f"\nEarly stopping triggered after {patience} evaluations without improvement.")
+                    break
             
             t0 = time.time()
             
