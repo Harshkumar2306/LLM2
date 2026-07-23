@@ -144,7 +144,8 @@ def main():
     with open(os.path.join(data_dir, "meta.json"), "r") as f:
         meta = json.load(f)
         
-    model = expand_embeddings(model, config.vocab_size, meta['new_vocab_size'], device)
+    new_vocab_size = meta.get('new_vocab_size', meta.get('vocab_size', config.vocab_size))
+    model = expand_embeddings(model, config.vocab_size, new_vocab_size, device)
     
     batch_size = 8
     if torch.cuda.device_count() > 1:
