@@ -35,8 +35,8 @@ class SFTDataset(Dataset):
             
         raw_offsets = meta[f"{split}_offsets"]
         
-        # Only keep offsets where we can fit a full context_length window
-        self.valid_offsets = [off for off in raw_offsets if off + context_length <= len(self.tokens)]
+        # Only keep offsets where we can fit a full context_length + 1 window (for target shifting)
+        self.valid_offsets = [off for off in raw_offsets if off + context_length + 1 <= len(self.tokens)]
         
     def __len__(self):
         return len(self.valid_offsets)
@@ -44,7 +44,8 @@ class SFTDataset(Dataset):
     def __getitem__(self, idx):
         i = self.valid_offsets[idx]
         x = torch.from_numpy(self.tokens[i:i+self.context_length].astype(np.int64))
-        y = torch.from_numpy(self.labels[i:i+self.context_length].astype(np.int64))
+        # Shift targets by 1 into the future!
+        y = torch.from_numpy(self.labels[i+1:i+self.context_length+1].astype(np.int64))
         return x, y
 
 def expand_embeddings(model, old_vocab_size, new_vocab_size, device):
