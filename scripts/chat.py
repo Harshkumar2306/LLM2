@@ -7,6 +7,7 @@ import inspect
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.gpt_config import GPTConfig
+from config.enums import AttentionType, PositionType, FFNType, NormType
 from models.model import GPT
 from tokenizer.tokenizer import Tokenizer
 
@@ -32,6 +33,14 @@ def main():
     
     valid_keys = inspect.signature(GPTConfig).parameters.keys()
     config_kwargs = {k: v for k, v in raw_config.items() if k in valid_keys}
+    if 'attention_type' in config_kwargs and isinstance(config_kwargs['attention_type'], str):
+        config_kwargs['attention_type'] = AttentionType(config_kwargs['attention_type'])
+    if 'position_type' in config_kwargs and isinstance(config_kwargs['position_type'], str):
+        config_kwargs['position_type'] = PositionType(config_kwargs['position_type'])
+    if 'ffn_type' in config_kwargs and isinstance(config_kwargs['ffn_type'], str):
+        config_kwargs['ffn_type'] = FFNType(config_kwargs['ffn_type'])
+    if 'norm_type' in config_kwargs and isinstance(config_kwargs['norm_type'], str):
+        config_kwargs['norm_type'] = NormType(config_kwargs['norm_type'])
     gpt_config = GPTConfig(**config_kwargs)
     gpt_config.vocab_size = 50261
     
