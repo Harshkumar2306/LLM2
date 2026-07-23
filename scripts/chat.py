@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.gpt_config import GPTConfig
 from config.enums import AttentionType, PositionType, FFNType, NormType
 from models.model import GPT
-from tokenizer.tokenizer import Tokenizer
+from tokenizer.tokenizer import Tokenizer, SPECIAL_TOKENS
 
 def get_default_device():
     if torch.cuda.is_available(): return 'cuda'
@@ -50,8 +50,8 @@ def main():
     model.to(device)
     model.eval()
     
-    tokenizer = Tokenizer()
-    end_token_id = tokenizer.special_tokens["<|end|>"]
+    tokenizer = Tokenizer(special_tokens=SPECIAL_TOKENS)
+    end_token_id = SPECIAL_TOKENS["<|end|>"]
     
     print("\n" + "="*50)
     print("🤖 Axiom Chat Interface (Type 'quit' to exit)")
