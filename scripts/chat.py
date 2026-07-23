@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--device', type=str, default=None)
     parser.add_argument('--temperature', type=float, default=0.7)
     parser.add_argument('--max_new_tokens', type=int, default=256)
+    parser.add_argument('--prompt', type=str, default=None)
     args = parser.parse_args()
     
     device = args.device if args.device else get_default_device()
@@ -54,15 +55,11 @@ def main():
     end_token_id = SPECIAL_TOKENS["<|end|>"]
     
     print("\n" + "="*50)
-    print("🤖 Axiom Chat Interface (Type 'quit' to exit)")
+    print("🤖 Axiom Chat Interface")
     print("="*50 + "\n")
     
-    while True:
-        user_input = input("\nYou: ")
-        if user_input.lower() in ['quit', 'exit']:
-            break
-            
-        prompt = f"<|system|>\nYou are Axiom, a helpful AI assistant.\n<|user|>\n{user_input}\n<|assistant|>\n"
+    def generate_response(user_text):
+        prompt = f"<|system|>\nYou are Axiom, a helpful AI assistant.\n<|user|>\n{user_text}\n<|assistant|>\n"
         tokens = tokenizer.encode(prompt)
         x = torch.tensor([tokens], dtype=torch.long, device=device)
         
@@ -86,7 +83,23 @@ def main():
                 x = torch.cat((x, next_token_tensor), dim=1)
                 text_chunk = tokenizer.decode([next_token])
                 print(text_chunk, end="", flush=True)
-        print()
+        print("\n")
+
+    if args.prompt:
+        print(f"You: {args.prompt}")
+        generate_response(args.prompt)
+    else:
+        print("Type 'quit' to exit")
+        while True:
+            try:
+                user_input = input("\nYou: ")
+            except EOFError:
+                break
+            if user_input.lower() in ['quit', 'exit']:
+                break
+            generate_response(user_input)
+            
+    # Generation logic moved to helper function above
 
 if __name__ == "__main__":
     main()
