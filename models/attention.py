@@ -64,7 +64,8 @@ class CausalSelfAttention(nn.Module):
         if self.position_type.value == "rope":
             # Precompute freqs_cis for RoPE
             freqs_cis = precompute_freqs_cis(self.head_dim, config.context_length)
-            self.register_buffer("freqs_cis", freqs_cis, persistent=False)
+            # WORKAROUND for PyTorch DataParallel: store complex numbers as real to prevent corruption!
+            self.register_buffer("freqs_cis_real", torch.view_as_real(freqs_cis), persistent=False)
         
         # QKV projection
         # Q size = n_heads * head_dim (d_model)
@@ -143,7 +144,9 @@ class CausalSelfAttention(nn.Module):
         v = v.view(B, T, self.n_kv_heads, self.head_dim).transpose(1, 2)
         
         if self.position_type.value == "rope":
-            q, k = apply_rotary_emb(q, k, self.freqs_cis[:T])
+            # Convert back to complex on the correct GPU
+            freqs_cis = torch.view_as_complex(self.freqs_cis_real)
+            q, k = apply_rotary_emb(q, k, freqs_cis[:T])
             
         # If GQA, repeat K and V to match Q's n_heads
         if self.num_repeats > 1:
