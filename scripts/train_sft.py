@@ -98,6 +98,7 @@ def estimate_loss(model, train_loader, val_loader, eval_iters, device):
                     _, loss = model(x, targets=y)
             else:
                 _, loss = model(x, targets=y)
+            loss = loss.mean() # Average loss across all GPUs
             losses.append(loss.item())
             
         out[split_name] = np.mean(losses) if losses else float('inf')
@@ -218,7 +219,7 @@ def main():
         else:
             logits, loss = model(x, targets=y)
             
-        # Backward pass using Scaler
+        loss = loss.mean() # Average loss across all GPUs
         scaler.scale(loss).backward()
         scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
