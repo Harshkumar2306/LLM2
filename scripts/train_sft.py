@@ -137,6 +137,14 @@ def main():
     model = GPT(config)
     
     checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
+    
+    # Handle resuming from SFT checkpoints with expanded vocab
+    checkpoint_vocab_size = checkpoint['model_state']['embeddings.wte.weight'].shape[0]
+    if checkpoint_vocab_size != config.vocab_size:
+        print(f"Checkpoint vocab size ({checkpoint_vocab_size}) differs from config ({config.vocab_size}). Updating config...")
+        config.vocab_size = checkpoint_vocab_size
+        model = GPT(config)
+        
     model.load_state_dict(checkpoint['model_state'])
     model.to(device)
     
