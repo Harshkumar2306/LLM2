@@ -24,6 +24,8 @@ def main():
     parser.add_argument('--temperature', type=float, default=0.7)
     parser.add_argument('--max_new_tokens', type=int, default=256)
     parser.add_argument('--prompt', type=str, default=None)
+    parser.add_argument('--top_k', type=int, default=50)
+    parser.add_argument('--repetition_penalty', type=float, default=1.15)
     args = parser.parse_args()
     
     device = args.device if args.device else get_default_device()
@@ -66,16 +68,32 @@ def main():
         print("Axiom: ", end="", flush=True)
         
         with torch.no_grad():
+            generated_tokens = []
             for _ in range(args.max_new_tokens):
                 x_cond = x if x.size(1) <= gpt_config.context_length else x[:, -gpt_config.context_length:]
                 out = model(x_cond, targets=None)
                 logits = out[0] if isinstance(out, tuple) else out
                 logits = logits[:, -1, :]
                 
+                # Apply repetition penalty
+                if args.repetition_penalty != 1.0 and len(generated_tokens) > 0:
+                    for token_id in set(generated_tokens):
+                        if logits[0, token_id] < 0:
+                            logits[0, token_id] *= args.repetition_penalty
+                        else:
+                            logits[0, token_id] /= args.repetition_penalty
+                
                 logits = logits / args.temperature
+                
+                # Apply top_k filtering
+                if args.top_k > 0:
+                    v, _ = torch.topk(logits, min(args.top_k, logits.size(-1)))
+                    logits[logits < v[:, [-1]]] = -float('Inf')
+                    
                 probs = torch.nn.functional.softmax(logits, dim=-1)
                 next_token_tensor = torch.multinomial(probs, num_samples=1)
                 next_token = next_token_tensor[0, -1].item()
+                generated_tokens.append(next_token)
                 
                 if next_token == end_token_id:
                     break
