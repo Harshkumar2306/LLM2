@@ -10,9 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-# Append repo root to sys.path to import from axiom_model
+# Append repo root and axiom_model to sys.path to resolve internal imports
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(ROOT_DIR)
+sys.path.append(os.path.join(ROOT_DIR, "axiom_model"))
 
 from axiom_model.config.gpt_config import GPTConfig
 from axiom_model.config.enums import AttentionType, PositionType, FFNType, NormType
