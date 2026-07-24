@@ -66,8 +66,9 @@ def load_model():
     with open(yaml_path, "r") as f:
         raw_config = yaml.safe_load(f)
     
+    model_config = raw_config.get('model', {})
     valid_keys = inspect.signature(GPTConfig).parameters.keys()
-    config_kwargs = {k: v for k, v in raw_config.items() if k in valid_keys}
+    config_kwargs = {k: v for k, v in model_config.items() if k in valid_keys}
     if 'attention_type' in config_kwargs: config_kwargs['attention_type'] = AttentionType(config_kwargs['attention_type'])
     if 'position_type' in config_kwargs: config_kwargs['position_type'] = PositionType(config_kwargs['position_type'])
     if 'ffn_type' in config_kwargs: config_kwargs['ffn_type'] = FFNType(config_kwargs['ffn_type'])
