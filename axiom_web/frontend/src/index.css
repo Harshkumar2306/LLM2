@@ -1,11 +1,12 @@
 :root {
-  --bg-color: #0b0f19;
-  --surface-color: rgba(255, 255, 255, 0.03);
-  --surface-border: rgba(255, 255, 255, 0.08);
-  --accent-color: #3b82f6;
-  --accent-glow: rgba(59, 130, 246, 0.5);
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
+  --bg-color: #09090b;
+  --surface-color: #18181b;
+  --surface-border: #27272a;
+  --accent-color: #e4e4e7;
+  --accent-glow: rgba(255, 255, 255, 0.1);
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --user-bubble: #27272a;
 }
 
 * {
@@ -22,9 +23,7 @@ body {
   width: 100vw;
   overflow: hidden;
 
-  background-image: 
-    radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15), transparent 25%);
+  /* Clean professional dark background without gamer gradients */
 }
 
 .app-container {
@@ -46,7 +45,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(9, 9, 11, 0.8);
+  backdrop-filter: blur(12px);
 }
 
 .header-title {
@@ -55,9 +55,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(to right, #60a5fa, #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-main);
 }
 
 .custom-dropdown {
@@ -214,36 +212,54 @@ body {
 
 .message-wrapper {
   display: flex;
+  flex-direction: row;
+  gap: 16px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.message-avatar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.message-wrapper.user .message-avatar {
+  background: var(--surface-color);
+  border: 1px solid var(--surface-border);
+}
+
+.message-wrapper.ai .message-avatar {
+  background: transparent;
+}
+
+.message-content {
+  display: flex;
   flex-direction: column;
-  max-width: 85%;
-}
-
-.message-wrapper.user {
-  align-self: flex-end;
-}
-
-.message-wrapper.ai {
-  align-self: flex-start;
+  max-width: calc(100% - 48px);
 }
 
 .message-bubble {
-  padding: 16px 20px;
-  border-radius: 20px;
   line-height: 1.6;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
-.message-wrapper.user .message-bubble {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
-  border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+.message-wrapper.user .message-content {
+  background: var(--user-bubble);
+  padding: 12px 18px;
+  border-radius: 16px;
+  color: var(--text-main);
 }
 
-.message-wrapper.ai .message-bubble {
-  background: var(--surface-color);
-  border: 1px solid var(--surface-border);
-  border-bottom-left-radius: 4px;
+.message-wrapper.ai .message-content {
+  background: transparent;
+  padding: 12px 0;
+  color: var(--text-main);
 }
 
 /* Markdown Styles */
@@ -302,24 +318,28 @@ body {
 
 .input-area {
   flex-shrink: 0;
-  padding: 20px 24px;
-  padding-bottom: max(20px, env(safe-area-inset-bottom));
-  border-top: 1px solid var(--surface-border);
-  background: rgba(15, 23, 42, 0.4);
+  padding: 24px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg-color) 60%, transparent);
   display: flex;
   justify-content: center;
+  position: relative;
+  z-index: 10;
 }
 
 .input-form {
   width: 100%;
-  max-width: 950px;
+  max-width: 800px;
   display: flex;
+  align-items: center;
   gap: 12px;
   background: var(--surface-color);
   border: 1px solid var(--surface-border);
-  border-radius: 16px;
+  border-radius: 24px;
   padding: 8px 12px;
+  padding-left: 20px;
   transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .input-form:focus-within {
@@ -344,12 +364,12 @@ body {
 }
 
 .send-button {
-  background: var(--accent-color);
-  color: white;
+  background: var(--text-main);
+  color: var(--bg-color);
   border: none;
-  border-radius: 12px;
-  width: 40px;
-  height: 40px;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -358,7 +378,7 @@ body {
 }
 
 .send-button:hover:not(:disabled) {
-  background: #2563eb;
+  opacity: 0.8;
   transform: scale(1.05);
 }
 

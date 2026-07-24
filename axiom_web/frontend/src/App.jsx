@@ -154,29 +154,39 @@ function App() {
       <main className="chat-container">
         {messages.map((msg) => (
           <div key={msg.id} className={`message-wrapper ${msg.role}`}>
-            <div className="message-bubble">
-              <ReactMarkdown>{msg.text}</ReactMarkdown>
+            <div className="message-avatar">
+              {msg.role === 'user' ? <User size={20} /> : <Bot size={20} color="#60a5fa" />}
             </div>
-            {msg.sources && msg.sources.length > 0 && (
-              <div className="sources-container">
-                {msg.sources.map((src, i) => (
-                  <a key={i} href={src.startsWith('http') ? src : '#'} target="_blank" rel="noreferrer" className="source-pill">
-                    <LinkIcon size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
-                    {src.replace(/^https?:\/\/(www\.)?/, '')}
-                  </a>
-                ))}
+            <div className="message-content">
+              <div className="message-bubble">
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
               </div>
-            )}
+              {msg.sources && msg.sources.length > 0 && (
+                <div className="sources-container">
+                  {msg.sources.map((src, i) => (
+                    <a key={i} href={src.startsWith('http') ? src : '#'} target="_blank" rel="noreferrer" className="source-pill">
+                      <LinkIcon size={12} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+                      {src.replace(/^https?:\/\/(www\.)?/, '')}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ))}
         
         {isGenerating && messages[messages.length - 1].role === 'user' && (
            <div className="message-wrapper ai">
-             <div className="message-bubble">
-               <div className="thinking-indicator">
-                 <div className="dot"></div>
-                 <div className="dot"></div>
-                 <div className="dot"></div>
+            <div className="message-avatar">
+              <Bot size={20} color="#60a5fa" />
+            </div>
+             <div className="message-content">
+               <div className="message-bubble">
+                 <div className="thinking-indicator">
+                   <div className="dot"></div>
+                   <div className="dot"></div>
+                   <div className="dot"></div>
+                 </div>
                </div>
              </div>
            </div>
