@@ -21,9 +21,7 @@ body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+
   background-image: 
     radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
     radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15), transparent 25%);
@@ -88,6 +86,7 @@ body {
   max-width: 1000px;
   width: 100%;
   margin: 0 auto;
+  padding-bottom: 40px; /* Extra padding at bottom to prevent hugging */
 }
 
 .chat-container::-webkit-scrollbar {
@@ -190,7 +189,9 @@ body {
 }
 
 .input-area {
+  flex-shrink: 0;
   padding: 20px 24px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--surface-border);
   background: rgba(15, 23, 42, 0.4);
   display: flex;
