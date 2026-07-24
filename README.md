@@ -33,13 +33,11 @@ app_port: 8000
 
 <br/>
 
-## 🌐 Live Environments
-| Resource | Link |
-| :--- | :--- |
-| **💻 Web Dashboard (React)** | [https://axiom0-gamma.vercel.app](https://axiom0-gamma.vercel.app) |
-| **⚙️ Backend API (FastAPI)** | `https://harsh0o23-smart-agro-api.hf.space/api/chat` |
-| **🗄️ Model Weights (LFS)** | [View sft_best.pt on GitHub](https://github.com/Harshkumar2306/LLM2/tree/main/axiom_model) |
-| **📁 Source Code** | [GitHub Repository](https://github.com/Harshkumar2306/LLM2) |
+**Live Demo:**
+
+*   **🌐 Frontend:** [https://axiom0-gamma.vercel.app](https://axiom0-gamma.vercel.app)
+*   **⚙️ Backend API:** [https://harsh0o23-smart-agro-api.hf.space](https://harsh0o23-smart-agro-api.hf.space)
+*   **🗄️ Model Weights:** [sft_best.pt (LFS)](https://github.com/Harshkumar2306/LLM2/tree/main/axiom_model)
 
 ---
 
