@@ -19,6 +19,7 @@ from axiom_model.config.gpt_config import GPTConfig
 from axiom_model.config.enums import AttentionType, PositionType, FFNType, NormType
 from axiom_model.models.model import GPT
 from axiom_model.tokenizer.tokenizer import Tokenizer, SPECIAL_TOKENS
+from axiom_model.utils.config_loader import ConfigLoader
 from axiom_model.scripts.retrievers import LocalRetriever, WebRetriever, HybridRetriever
 
 app = FastAPI(title="Axiom API")
@@ -27,7 +28,7 @@ app = FastAPI(title="Axiom API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -63,16 +64,11 @@ def load_model():
         print(f"Warning: Checkpoint not found at {checkpoint_path}. Please place sft_best.pt in axiom_model/")
         return
         
-    with open(yaml_path, "r") as f:
-        raw_config = yaml.safe_load(f)
+    # Use the official ConfigLoader to correctly handle base.yaml inheritance and enums
+    full_config = ConfigLoader.load(yaml_path)
     
-    model_config = raw_config.get('model', {})
     valid_keys = inspect.signature(GPTConfig).parameters.keys()
-    config_kwargs = {k: v for k, v in model_config.items() if k in valid_keys}
-    if 'attention_type' in config_kwargs: config_kwargs['attention_type'] = AttentionType(config_kwargs['attention_type'])
-    if 'position_type' in config_kwargs: config_kwargs['position_type'] = PositionType(config_kwargs['position_type'])
-    if 'ffn_type' in config_kwargs: config_kwargs['ffn_type'] = FFNType(config_kwargs['ffn_type'])
-    if 'norm_type' in config_kwargs: config_kwargs['norm_type'] = NormType(config_kwargs['norm_type'])
+    config_kwargs = {k: v for k, v in full_config.items() if k in valid_keys}
     
     gpt_config = GPTConfig(**config_kwargs)
     checkpoint = torch.load(checkpoint_path, map_location=device)
