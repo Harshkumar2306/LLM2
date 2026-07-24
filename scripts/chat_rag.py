@@ -31,7 +31,8 @@ def main():
     parser.add_argument('--max_new_tokens', type=int, default=256)
     parser.add_argument('--prompt', type=str, default=None)
     parser.add_argument('--top_k_retrieval', type=int, default=2, help='Number of chunks to retrieve')
-    parser.add_argument('--threshold', type=float, default=0.3, help='Minimum similarity score to use context')
+    parser.add_argument('--min_similarity', type=float, default=0.3, help='Minimum inner product score to use context')
+    parser.add_argument('--debug_retrieval', action='store_true', help='Print detailed retrieval metrics and scores')
     args = parser.parse_args()
     
     device = args.device if args.device else get_default_device()
@@ -90,21 +91,40 @@ def main():
         
         context_text = ""
         valid_chunks = 0
-        for distance, idx in zip(D[0], I[0]):
+        debug_output = []
+        
+        for i, (distance, idx) in enumerate(zip(D[0], I[0])):
             if idx != -1 and idx < len(rag_meta):
-                if distance >= args.threshold:
+                if distance >= args.min_similarity:
                     source = rag_meta[idx].get('source', 'Unknown')
-                    context_text += f"[Source: {source}]\n{rag_meta[idx]['text']}\n\n"
+                    text = rag_meta[idx]['text']
+                    context_text += f"[Source: {source}]\n{text}\n\n"
                     valid_chunks += 1
+                    if args.debug_retrieval:
+                        debug_output.append(f"{i+1}.\nSource: {source}\nSimilarity: {distance:.4f}\n{text[:150]}...")
                 
-        if valid_chunks > 0:
-            print(f"\n[Retrieved {valid_chunks} relevant chunks from FAISS (Threshold: {args.threshold})]")
-            print(context_text.strip()[:200] + "...\n")
-            # 2. Build explicit augmented prompt
-            prompt = f"<|system|>\nYou are Axiom. Use the following retrieved information to answer.\nContext:\n----------------\n{context_text.strip()}\n----------------<|end|>\n<|user|>\nQuestion:\n{user_text}\nAnswer:<|end|>\n<|assistant|>\n"
-        else:
-            print(f"\n[No relevant documents found above threshold {args.threshold}]\n")
-            prompt = f"<|system|>\nYou are Axiom, a helpful AI assistant.<|end|>\n<|user|>\n{user_text}<|end|>\n<|assistant|>\n"
+        if args.debug_retrieval:
+            print("\n=== [DEBUG: RETRIEVAL RESULTS] ===")
+            if valid_chunks > 0:
+                print("\n------------------\n".join(debug_output))
+            else:
+                print(f"No chunks passed the --min_similarity of {args.min_similarity}")
+            print("==================================\n")
+            
+        # 2. Build augmented prompt via module
+        def build_rag_prompt(ctx, query):
+            if ctx:
+                return (
+                    f"<|system|>\nYou are Axiom, a helpful AI assistant.\n"
+                    f"Use the retrieved context below only if it is relevant to the user's question. "
+                    f"If the context is insufficient, answer from your general knowledge and clearly state when you are not certain.\n"
+                    f"Context:\n========\n{ctx.strip()}\n<|end|>\n"
+                    f"<|user|>\nQuestion:\n========\n{query}\nAnswer:\n======<|end|>\n<|assistant|>\n"
+                )
+            else:
+                return f"<|system|>\nYou are Axiom, a helpful AI assistant.<|end|>\n<|user|>\n{query}<|end|>\n<|assistant|>\n"
+                
+        prompt = build_rag_prompt(context_text, user_text)
         
         tokens = tokenizer.encode(prompt)
         x = torch.tensor([tokens], dtype=torch.long, device=device)
