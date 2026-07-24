@@ -8,11 +8,41 @@ pinned: false
 app_port: 8000
 ---
 
-# 🚀 Axiom AI: Full-Stack Large Language Model Ecosystem
+<div align="center">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/1/10/PyTorch_logo_icon.svg" width="80" alt="PyTorch Logo">
+  <h1 align="center">Axiom AI: The Monolithic Ecosystem</h1>
+  <p align="center">
+    <strong>An end-to-end, fully custom 114M parameter Large Language Model and Hybrid-RAG Web Ecosystem.</strong>
+  </p>
+  <p align="center">
+    <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch">
+    <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" alt="FastAPI">
+    <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React">
+    <img src="https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E" alt="Vite">
+  </p>
+</div>
 
-An end-to-end, fully custom 114M parameter Large Language Model and Hybrid-RAG Web Ecosystem.
+---
 
-Unlike standard API wrappers, **Axiom is a proprietary neural network written from scratch in pure PyTorch**, coupled with a blazing-fast FastAPI backend and a premium React.js frontend.
+## 📖 Table of Contents
+1. [Project Philosophy](#-project-philosophy)
+2. [System Architecture](#-system-architecture)
+3. [The Neural Network (Axiom v1.0)](#-the-neural-network-axiom-v10)
+4. [The 7.5B Training Curriculum](#-the-75b-training-curriculum)
+5. [Hybrid Brain (RAG) Architecture](#-hybrid-brain-rag-architecture)
+6. [Performance Metrics](#-performance-metrics)
+7. [Local Setup & Deployment](#-local-setup--deployment)
+
+---
+
+## 🧠 Project Philosophy
+
+Unlike standard API wrappers that simply forward calls to OpenAI, **Axiom is a proprietary neural network written entirely from scratch**. We constructed the tensor mathematics, compiled the dataset, trained the model over 7.5 Billion tokens, and wrapped it in a production-ready streaming architecture.
+
+This repository is a **Monorepo** containing three core pillars:
+1. **`axiom_model`**: The raw PyTorch training engine, weights, and inference logic.
+2. **`axiom_web/backend`**: A blazing-fast FastAPI server utilizing Server-Sent Events (SSE).
+3. **`axiom_web/frontend`**: A premium Glassmorphism React.js UI that consumes the live token stream.
 
 ---
 
@@ -21,26 +51,26 @@ Unlike standard API wrappers, **Axiom is a proprietary neural network written fr
 ```mermaid
 graph TB
     subgraph Frontend["Frontend (React + Vite)"]
-        UI["Axiom Dashboard"]
-        UI --> |"REST API + SSE"| API
+        UI["Axiom Dashboard (Glassmorphism UI)"]
+        UI --> |"REST API + SSE Stream"| API
     end
 
     subgraph Backend["Backend (FastAPI)"]
         API["FastAPI Server"]
         
         subgraph RAG["Hybrid Brain Retrievers"]
-            R1["🌐 WebRetriever (DuckDuckGo Scraper)"]
+            R1["🌐 WebRetriever (DuckDuckGo Live Scraper)"]
             R2["📚 LocalRetriever (FAISS Vector DB)"]
             R1 & R2 --> R3["🧠 HybridRetriever"]
         end
         
-        API --> |"Queries Context"| RAG
-        API --> |"Context + Prompt"| MODEL["PyTorch Engine"]
+        API --> |"Dynamic Queries"| RAG
+        API --> |"Context + Augmented Prompt"| MODEL["PyTorch Engine"]
     end
 
     subgraph Model["The Neural Network (114M)"]
-        MODEL --> |"Token Generation"| LLM["sft_best.pt (GQA, SwiGLU, RoPE)"]
-        LLM --> |"Streams Tokens"| API
+        MODEL --> |"Autoregressive Generation"| LLM["sft_best.pt (GQA, SwiGLU, RoPE)"]
+        LLM --> |"Real-Time Token Flush"| API
     end
 
     style Frontend fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
@@ -51,85 +81,69 @@ graph TB
 
 ---
 
-## 🌟 Features & Architecture
+## 🔬 The Neural Network (Axiom v1.0)
 
-### 1. The Custom PyTorch Neural Network
-Axiom is built on a highly customized, 114M parameter autoregressive transformer. We bypassed off-the-shelf libraries to maintain absolute control over tensor operations.
-*   **Grouped-Query Attention (GQA):** Implemented with a 3:1 ratio (12 Query heads, 4 KV heads) to reduce KV-Cache VRAM by 66% during generation.
-*   **SwiGLU Activations:** Element-wise gating mechanism for superior convergence speed.
-*   **Rotary Positional Embeddings (RoPE):** Encodes relative sequence positions directly into the attention mechanism via complex plane rotation.
-*   **RMSNorm:** Drops mean-centering for significantly faster GPU execution.
+Axiom relies on a modern, highly optimized Autoregressive Transformer architecture.
 
-### 2. The Pre-Training Pipeline
-To teach the model human language, we crafted a carefully balanced **7.5 Billion token curriculum**:
+### Hyperparameters & Tensor Mathematics
+*   **Parameters:** 114 Million
+*   **Layers:** 12 Transformer Blocks
+*   **Dimensionality (`d_model`):** 768
+*   **Attention Mechanism:** 12 Query Heads, 4 KV Heads
+*   **Context Window:** 2048 Tokens
 
-| Dataset | Subset / Repo | Percentage | Purpose |
+### Architectural Enhancements
+1.  **Grouped-Query Attention (GQA):** By sharing Keys and Values across multiple Query heads (3:1 ratio), we dramatically reduced KV-Cache memory bandwidth during inference.
+2.  **SwiGLU Activations:** Replaced standard ReLU/GELU with a Swish-Gated Linear Unit (`Swish(xW) * xV`), allowing for richer representations and faster convergence.
+3.  **Rotary Positional Embeddings (RoPE):** Eliminated absolute positional embeddings in favor of RoPE, which encodes relative distances directly into the Q and K vectors via complex plane rotations.
+4.  **RMSNorm:** Replaced standard LayerNorm with Root Mean Square Normalization to eliminate mean-centering computation, boosting GPU throughput.
+
+---
+
+## 📚 The 7.5B Training Curriculum
+
+To teach the model human language, coding logic, and conversational alignment, we engineered a carefully balanced **7.5 Billion token curriculum** during the Phase 1 Pre-Training loop.
+
+| Dataset | Subset / Source Repo | Percentage | Core Objective |
 | :--- | :--- | :--- | :--- |
-| **FineWeb-Edu** | `HuggingFaceFW/fineweb-edu` | 55% | Educational web data for general knowledge. |
-| **StarCoder** | `vikp/starcoder_cleaned` | 20% | Cleaned programming data for logical reasoning. |
-| **Wikipedia** | `wikimedia/wikipedia` | 10% | Encyclopedic facts and historical data. |
-| **OpenOrca** | `Open-Orca/OpenOrca` | 10% | Technical and instructional data. |
-| **MiniPile Books** | `JeanKaddour/minipile` | 5% | Long-form literature for narrative coherence. |
+| **FineWeb-Edu** | `HuggingFaceFW/fineweb-edu` | 55% | Broad educational web data for foundational world knowledge. |
+| **StarCoder** | `vikp/starcoder_cleaned` | 20% | Cleaned programming data for logical reasoning and syntax structure. |
+| **Wikipedia** | `wikimedia/wikipedia` | 10% | Encyclopedic facts, dates, and historical data. |
+| **OpenOrca** | `Open-Orca/OpenOrca` | 10% | Technical instruction-following and chain-of-thought data. |
+| **MiniPile Books** | `JeanKaddour/minipile` | 5% | Long-form literature to develop narrative coherence. |
 
-### 3. "Hybrid Brain" RAG System
-LLMs hallucinate and lack real-time data. We solved this with a multi-modal Retrieval-Augmented Generation pipeline:
-*   **Local FAISS Database:** Retrieves context from private documents using vector embeddings.
-*   **Live Web Search:** Silently executes a live DuckDuckGo query (`ddgs`), scrapes the top 3 HTML results, and injects the live text directly into the LLM's system prompt before generation.
-*   **Hybrid Mode:** Simultaneously searches both local databases and the live internet.
-
-### 4. Ultra-Premium React Dashboard
-Built with React, Vite, CSS3, and Lucide Icons.
-*   Features a deep Glassmorphism dark mode aesthetic.
-*   **Server-Sent Events (SSE):** Renders the LLM's generated tokens chunk-by-chunk in real time.
-*   **Rigid Flex-Box Layout:** Prevents the UI from stretching or jittering during heavy text generation.
-*   **Source Citations:** Renders clickable URL pills beneath the message to cite web scraper sources.
+Following Phase 1, the model underwent **Phase 2: Supervised Fine-Tuning (SFT)** on a high-quality conversational dataset to align it as an AI assistant, resulting in the final `sft_best.pt` deployment weights.
 
 ---
 
-## 📊 Performance & System Metrics
+## 🌐 Hybrid Brain (RAG) Architecture
 
-Because Axiom was engineered for local-first execution and heavily optimized, it runs exceptionally well on consumer hardware.
+Because 114M parameters cannot memorize the entire internet, we augmented Axiom with a multi-modal Retrieval-Augmented Generation (RAG) pipeline.
 
-| Metric | Result | Notes |
+1.  **WebRetriever (`ddgs`):** When a user asks about current events, the backend silently halts generation, executes a live DuckDuckGo search, scrapes the HTML of the top 3 results, and compiles the text.
+2.  **LocalRetriever (`FAISS`):** Retrieves domain-specific context from local documents using highly optimized vector embeddings.
+3.  **Context Injection:** The retrieved text is injected into the `<|system|>` prompt wrapper before the tokens reach the PyTorch engine, allowing Axiom to "read" the internet before answering.
+
+---
+
+## 📊 Performance Metrics
+
+Axiom was engineered specifically for edge-deployment and local-first execution.
+
+| Metric | Result | Hardware Target |
 | :--- | :--- | :--- |
-| **Inference Speed** | `35-45 tokens/sec` | Benchmarked on standard Apple Silicon M-Series CPUs. |
-| **Training Loss** | `~2.85 Validation Loss` | Achieved after the 7.5B token curriculum. |
-| **RAG Latency** | `~1.2 seconds` | Round-trip DuckDuckGo query, HTML scraping, and context compilation. |
-| **Memory Footprint** | `~450MB - 800MB` | 450MB baseline, expanding to 800MB during heavy 2048-token KV-Caching. |
+| **Inference Speed** | `35-45 tokens/sec` | Standard Apple Silicon M-Series CPUs / Nvidia T4. |
+| **RAG Web Latency** | `~1.2 seconds` | Includes DuckDuckGo query, HTML scraping, and parsing. |
+| **Base VRAM/RAM** | `~450 MB` | Idle memory footprint (FP32 weights only). |
+| **Peak VRAM/RAM** | `~800 MB` | Under maximum load during heavy 2048-token KV-Caching. |
+| **SFT Validation Loss** | `~2.85` | Achieved upon completion of the conversational alignment phase. |
 
 ---
 
-## 📁 Project Structure
-
-```text
-LLM2/
-├── axiom_model/          # The PyTorch Neural Network & Training Engine
-│   ├── configs/          # YAML configurations (Hyperparameters)
-│   ├── core/             # PyTorch Modules (attention.py, ffn.py, model.py)
-│   ├── data/             # Datasets, tokenization, and data loaders
-│   ├── scripts/          # Training loops, eval, and RAG retrievers
-│   ├── sft_best.pt       # Final Supervised Fine-Tuned weights
-│   └── trainer/          # Distributed PyTorch training engine
-├── axiom_web/            # The Full-Stack Web Application
-│   ├── backend/          # FastAPI Server (Bridging PyTorch & React)
-│   │   ├── main.py       # API Routes and SSE streaming logic
-│   │   └── requirements.txt
-│   └── frontend/         # The React.js / Vite Application
-│       ├── src/
-│       │   ├── App.jsx   # Main Chat Interface
-│       │   └── index.css # Premium styling
-└── README.md
-```
-
----
-
-## 🛠️ Local Setup & Testing
-
-### Prerequisites
-*   Python 3.10+
-*   Node.js 18+
+## 🚀 Local Setup & Deployment
 
 ### 1. Run Backend (FastAPI + PyTorch)
+Navigate to the backend directory, install the dependencies, and start the Uvicorn server:
 ```bash
 cd axiom_web/backend
 pip install -r requirements.txt
@@ -138,6 +152,7 @@ uvicorn main:app --reload --port 8000
 *The API will be available at http://localhost:8000.*
 
 ### 2. Run Frontend (React Dashboard)
+Navigate to the frontend directory, install Node modules, and boot the Vite server:
 ```bash
 cd axiom_web/frontend
 npm install
@@ -145,11 +160,12 @@ npm run dev
 ```
 *The dashboard will be available at http://localhost:5173.*
 
-### 3. Testing the Workflow
-1. Open the dashboard in your browser.
-2. Select **"Live Web Search"** or **"Hybrid Brain"** from the custom dropdown menu.
-3. Ask the AI a question about a recent event.
-4. Watch the backend intercept the query, scrape the live internet, and stream the generated answer token-by-token directly to your screen!
+### 3. Cloud Deployment (Hugging Face + Vercel)
+This repository is configured for automated CI/CD deployments:
+1. **GitHub Actions (Backend):** Pushing to the `main` branch automatically triggers `.github/workflows/sync_to_hf.yml`, which forces a sync to Hugging Face Spaces. The Space automatically builds the `Dockerfile` and boots the FastAPI server.
+2. **Vercel (Frontend):** Vercel watches the `axiom_web/frontend` directory. Ensure your Vercel Environment Variables contain `VITE_API_URL` pointing to your deployed Hugging Face Space.
 
 ---
-*Engineered from scratch.*
+<div align="center">
+  <i>Engineered from scratch by Harsh Kumar.</i>
+</div>
