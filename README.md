@@ -20,7 +20,26 @@ app_port: 8000
     <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React">
     <img src="https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E" alt="Vite">
   </p>
+  <p>
+    <img src="https://img.shields.io/badge/Platform-Web%20%7C%20Local-lightgrey?style=flat-square" alt="Platforms">
+    <img src="https://img.shields.io/badge/Architecture-RAG%20%2B%20SSE%20Streaming-success?style=flat-square" alt="Architecture">
+    <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License">
+  </p>
 </div>
+
+<br/>
+
+> **Axiom AI** is an end-to-end ecosystem that bridges raw PyTorch machine learning with a blazing-fast web streaming architecture. It features a custom 114M parameter neural network hooked into a live internet-scraping Hybrid RAG system, all delivered through a premium glassmorphism React interface.
+
+<br/>
+
+## 🌐 Live Environments
+| Resource | Link |
+| :--- | :--- |
+| **💻 Web Dashboard (React)** | [https://axiom0-gamma.vercel.app](https://axiom0-gamma.vercel.app) |
+| **⚙️ Backend API (FastAPI)** | `https://harsh0o23-smart-agro-api.hf.space/api/chat` |
+| **🗄️ Model Weights (LFS)** | [View sft_best.pt on GitHub](https://github.com/Harshkumar2306/LLM2/tree/main/axiom_model) |
+| **📁 Source Code** | [GitHub Repository](https://github.com/Harshkumar2306/LLM2) |
 
 ---
 
