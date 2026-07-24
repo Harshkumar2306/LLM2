@@ -30,6 +30,8 @@ def main():
     parser.add_argument('--temperature', type=float, default=0.7)
     parser.add_argument('--max_new_tokens', type=int, default=256)
     parser.add_argument('--prompt', type=str, default=None)
+    parser.add_argument('--top_k_retrieval', type=int, default=2, help='Number of chunks to retrieve')
+    parser.add_argument('--threshold', type=float, default=0.3, help='Minimum similarity score to use context')
     args = parser.parse_args()
     
     device = args.device if args.device else get_default_device()
@@ -84,18 +86,25 @@ def main():
         # 1. Retrieve context
         query_vec = embedder.encode([user_text])
         query_vec = query_vec / np.linalg.norm(query_vec, axis=1, keepdims=True)
-        D, I = faiss_index.search(query_vec.astype(np.float32), k=2)
+        D, I = faiss_index.search(query_vec.astype(np.float32), k=args.top_k_retrieval)
         
         context_text = ""
-        for idx in I[0]:
+        valid_chunks = 0
+        for distance, idx in zip(D[0], I[0]):
             if idx != -1 and idx < len(rag_meta):
-                context_text += rag_meta[idx]["text"] + "\n\n"
+                if distance >= args.threshold:
+                    source = rag_meta[idx].get('source', 'Unknown')
+                    context_text += f"[Source: {source}]\n{rag_meta[idx]['text']}\n\n"
+                    valid_chunks += 1
                 
-        print("\n[Retrieved Context]")
-        print(context_text.strip()[:200] + "...\n")
-        
-        # 2. Build augmented prompt
-        prompt = f"<|system|>\nYou are Axiom, a helpful AI assistant. Use the following context to answer the user's question:\n{context_text.strip()}<|end|>\n<|user|>\n{user_text}<|end|>\n<|assistant|>\n"
+        if valid_chunks > 0:
+            print(f"\n[Retrieved {valid_chunks} relevant chunks from FAISS (Threshold: {args.threshold})]")
+            print(context_text.strip()[:200] + "...\n")
+            # 2. Build explicit augmented prompt
+            prompt = f"<|system|>\nYou are Axiom. Use the following retrieved information to answer.\nContext:\n----------------\n{context_text.strip()}\n----------------<|end|>\n<|user|>\nQuestion:\n{user_text}\nAnswer:<|end|>\n<|assistant|>\n"
+        else:
+            print(f"\n[No relevant documents found above threshold {args.threshold}]\n")
+            prompt = f"<|system|>\nYou are Axiom, a helpful AI assistant.<|end|>\n<|user|>\n{user_text}<|end|>\n<|assistant|>\n"
         
         tokens = tokenizer.encode(prompt)
         x = torch.tensor([tokens], dtype=torch.long, device=device)

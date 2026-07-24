@@ -34,6 +34,8 @@ def main():
     parser.add_argument('--docs_dir', type=str, required=True, help='Directory containing text or PDF files')
     parser.add_argument('--out_dir', type=str, default='experiments/rag_db', help='Output directory for the FAISS index')
     parser.add_argument('--model', type=str, default='all-MiniLM-L6-v2', help='SentenceTransformer model name')
+    parser.add_argument('--chunk_size', type=int, default=500, help='Number of words per chunk')
+    parser.add_argument('--overlap', type=int, default=50, help='Number of overlapping words between chunks')
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -57,7 +59,7 @@ def main():
                 continue
                 
             if text.strip():
-                chunks = chunk_text(text)
+                chunks = chunk_text(text, chunk_size=args.chunk_size, overlap=args.overlap)
                 for chunk in chunks:
                     if len(chunk.strip()) > 20: # Ignore tiny chunks
                         all_chunks.append({
