@@ -199,17 +199,12 @@ body {
   width: 100%;
   margin: 0 auto;
   padding-bottom: 40px; /* Extra padding at bottom to prevent hugging */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 .chat-container::-webkit-scrollbar {
-  width: 6px;
-}
-.chat-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-.chat-container::-webkit-scrollbar-thumb {
-  background: var(--surface-border);
-  border-radius: 10px;
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .message-wrapper {
