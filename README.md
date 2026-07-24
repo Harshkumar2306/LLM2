@@ -39,14 +39,27 @@ LLM2/
 
 ## 🧠 Part 1: The Core Neural Network (`axiom_model/`)
 
-The model is a 114M parameter autoregressive transformer written in pure PyTorch.
+Axiom is built on a highly customized, 114M parameter autoregressive transformer architecture written from scratch in pure PyTorch. We bypassed off-the-shelf libraries like HuggingFace `transformers` to maintain absolute control over tensor operations and memory optimizations.
 
-### 🔬 Architectural Choices
-We rigorously benchmarked and implemented modern, state-of-the-art transformer techniques:
-1. **Grouped-Query Attention (GQA):** Replaced standard Multi-Head Attention. By grouping key-value heads (`n_kv_heads: 4`), we drastically reduced VRAM overhead during generation, allowing for massive batch sizes without OOM errors.
-2. **SwiGLU Activations:** Replaced the standard GeLU activation in the Feed-Forward Network. SwiGLU provides superior convergence rates by utilizing a learned gating mechanism.
-3. **Rotary Positional Embeddings (RoPE):** Replaced absolute positional embeddings. RoPE encodes relative positional information directly into the attention calculations by rotating the query and key vectors in a complex plane.
-4. **RMSNorm:** Replaced standard LayerNorm to improve computational speed without sacrificing stability.
+### ⚙️ Exact Hyperparameters (`axiom_v1.0.yaml`)
+- **Embedding Dimension (`d_model`)**: `768`
+- **Transformer Blocks (`n_layers`)**: `12`
+- **Attention Heads (`n_heads`)**: `12`
+- **KV Heads (`n_kv_heads`)**: `4` (for GQA)
+- **Vocabulary Size**: `50257` (GPT-2 BPE Tokenizer via TikToken)
+- **Context Window**: `2048` tokens
+
+### 🔬 Deep Architectural Engineering
+We systematically benchmarked standard transformer components against modern state-of-the-art techniques and completely overhauled the base architecture:
+
+1. **Grouped-Query Attention (GQA) & KV-Caching**: 
+   Instead of standard Multi-Head Attention (where every query head gets its own key/value head), we implemented GQA with a 3:1 ratio (12 Query heads, 4 KV heads). This mathematically reduces the size of the KV-Cache tensors by 66% during generation, drastically lowering VRAM requirements and speeding up inference, while retaining the reasoning quality of Multi-Head Attention.
+2. **SwiGLU Feed-Forward Networks**: 
+   We replaced the standard GeLU activation with SwiGLU. SwiGLU splits the `d_model` tensor into two parallel transformations and applies a learned element-wise gating mechanism. This allowed the model to achieve a lower validation loss significantly faster during Phase 1 training.
+3. **Rotary Positional Embeddings (RoPE)**: 
+   We ripped out traditional absolute positional embeddings. Instead, RoPE encodes relative sequence positions directly into the attention mechanism by rotating the query and key vectors within a complex mathematical plane. This gives the model superior long-range dependency tracking and better length extrapolation.
+4. **RMSNorm (Root Mean Square Normalization)**: 
+   We replaced standard LayerNorm. RMSNorm drops the mean-centering operation, calculating only the variance. This achieves the same stabilizing effect as LayerNorm but executes significantly faster on GPU hardware.
 
 ### 📚 The Pre-Training Pipeline (Phase 1)
 To teach the model the fundamental rules of human language, we designed a perfectly balanced **7.5 Billion token curriculum** (`data/datasets.yaml`):
@@ -63,13 +76,14 @@ To teach the model the fundamental rules of human language, we designed a perfec
 ### 🗣 The Fine-Tuning Pipeline (Phase 2)
 A raw base model only predicts text. To turn Axiom into an assistant, we performed Supervised Fine-Tuning (SFT).
 - **Code:** `scripts/train_sft.py`
-- **Process:** We injected `<|user|>` and `<|assistant|>` control tokens into a high-quality conversational dataset. The model learned to stop predicting random internet text and instead adopt an assistant persona. 
-- **Output:** The final weights are saved as `sft_best.pt`.
+- **Token Formatting:** We programmatically injected custom `<|user|>` and `<|assistant|>` control tokens into a high-quality conversational dataset. During the forward pass, we mask out the user's prompt tokens when calculating the CrossEntropy loss, ensuring the optimizer only calculates gradients based on the assistant's generated responses. 
+- **Output:** The final assistant-aligned weights are saved as `sft_best.pt`.
 
-### 📂 File-by-File Breakdown (`axiom_model/models/`)
-- `attention.py`: Contains the `CausalSelfAttention` class. Implements the mathematically complex RoPE rotations and the GQA tensor reshaping (`einops` style).
-- `ffn.py`: Implements the `SwiGLU` Feed-Forward network.
-- `model.py`: The `GPT` wrapper that ties everything together. Contains the `generate()` function which handles Top-K sampling, temperature scaling, and KV-caching.
+### 📂 Deep Dive: Neural Network Codebase (`axiom_model/`)
+- **`core/model.py`**: The `GPT` wrapper. Initializes the embeddings, the stack of transformer blocks, and the final linear projection layer. Critically, it houses the `generate()` function which implements Top-K sampling, softmax temperature scaling, and manages the continuous updating of the KV-cache tensors during autoregressive generation.
+- **`core/attention.py`**: The mathematical core. Contains the `CausalSelfAttention` module. This file manually handles the intricate tensor reshaping required for Grouped-Query Attention using advanced `einops`-style `view()` and `transpose()` operations, and applies the causal attention mask to prevent the model from looking into the future.
+- **`core/ffn.py`**: A highly optimized SwiGLU implementation that projects the `768` dimension tensor into a hidden dimension of `(768 * 4 * 2/3)` as per LLaMA architecture standards, before gating and projecting back.
+- **`engine/trainer.py`**: The training heartbeat. Manages the distributed training loops, handles PyTorch's `backward()` pass, implements gradient clipping to prevent exploding gradients, and updates weights using the `AdamW` optimizer with a Cosine Annealing learning rate schedule.
 
 ---
 
