@@ -1,111 +1,97 @@
 <div align="center">
-  <h1>🧠 Axiom Foundation Model</h1>
-  <p><i>A full-stack, from-scratch 114M parameter Large Language Model and Web Application.</i></p>
+  <h1>🧠 Axiom AI</h1>
+  <p><b>A custom-built, 114M parameter Large Language Model with a full-stack Live Web-Search RAG pipeline.</b></p>
 </div>
 
 ---
 
-## 🌟 Overview
+## 📖 Overview
 
-**Axiom** is a complete, end-to-end AI ecosystem built entirely from scratch. This project doesn't just wrap an OpenAI API—it contains a custom-built PyTorch transformer architecture, a supervised fine-tuning (SFT) pipeline, a high-performance FastAPI streaming backend, and a beautiful React UI.
+Axiom is an end-to-end, fully custom AI ecosystem built entirely from scratch. Unlike wrappers around OpenAI's API, **Axiom is a proprietary neural network written in pure PyTorch**. 
 
-This monorepo serves as a masterclass in modern LLM architecture, showcasing how to build, train, and deploy an instruction-following model on consumer hardware.
+This project documents the entire journey of building a Large Language Model—from designing the core Transformer architecture and benchmarking modern techniques (like RoPE and SwiGLU), to pre-training, Supervised Fine-Tuning (SFT), and finally deploying the weights into a blazing-fast, production-ready React web application with live internet browsing capabilities.
 
-## ✨ Features
+## ✨ Key Features
 
-### 🧠 Modern Architecture (Axiom v1.0)
-- **114M Parameters**: Engineered for rapid training and inference on standard hardware.
-- **Grouped-Query Attention (GQA)**: drastically reduces KV cache memory footprint.
-- **SwiGLU Activation**: State-of-the-art non-linear activation function for better representation.
-- **Rotary Positional Embeddings (RoPE)**: Enhanced sequence extrapolation.
-- **RMSNorm & Weight Tying**: Stabilized training dynamics and parameter efficiency.
-
-### ⚡ High-Performance Backend
-- **FastAPI**: Asynchronous Python backend serving the PyTorch model.
-- **Server-Sent Events (SSE)**: Real-time, token-by-token streaming back to the client.
-- **Hybrid RAG Pipeline**: Built-in FAISS vector database integration for grounding the model in external knowledge.
-
-### 🎨 Stunning Frontend
-- **React + Vite**: Lightning-fast UI compilation.
-- **Glassmorphism UI**: A premium, modern dark-mode aesthetic with blur effects and sleek gradients.
-- **Markdown Rendering**: Full support for code blocks and formatted AI responses via `react-markdown`.
+- **Custom PyTorch LLM**: A 114M parameter autoregressive transformer built from the ground up.
+- **Winning Architecture**: Benchmarked and implemented modern techniques including **Grouped-Query Attention (GQA)**, **SwiGLU** activation, **Rotary Positional Embeddings (RoPE)**, and **RMSNorm**.
+- **Live Web Search (RAG)**: The AI can break out of its static weights. It intercepts queries, silently scrapes DuckDuckGo using `ddgs`, and injects live internet data into its context window before generating an answer.
+- **Local FAISS Database**: Seamless integration with a local vector database for querying internal documents.
+- **Hybrid Brain Mode**: Simultaneously queries local documents and the live web, concatenating the best results.
+- **Server-Sent Events (SSE)**: Blazing fast token-by-token streaming from the PyTorch backend to the React frontend.
+- **Premium UI/UX**: A highly polished, custom React frontend featuring a glassmorphism aesthetic, custom animated dropdowns, Markdown rendering, and clickable source citations.
 
 ---
 
-## 📂 Repository Structure
+## 🏗 System Architecture
 
-```text
-LLM2/
-├── axiom_model/            # Core PyTorch Neural Network & Training Pipeline
-│   ├── models/             # Transformer blocks, embeddings, and attention
-│   ├── scripts/            # Training, validation, and SFT scripts
-│   ├── configs/            # YAML hyperparameter configurations
-│   └── data/               # Datasets and tokenization logic
-│
-├── axiom_web/              # Full-Stack Application
-│   ├── backend/            # FastAPI Server (main.py)
-│   └── frontend/           # React + Vite Web UI
-│
-└── Dockerfile              # Production deployment configuration
-```
+The Axiom ecosystem is divided into three distinct layers:
 
----
+### 1. The Core Model (`axiom_model/`)
+The beating heart of the system. This directory contains the pure PyTorch implementation of the GPT architecture.
+- **`config/`**: Highly modular YAML configuration system mapped to Pydantic-style Python classes.
+- **`core/`**: The neural network components (`attention.py`, `ffn.py`, `model.py`).
+- **`scripts/`**: Training loops, dataset preparation, and evaluation harnesses.
 
-## 🚀 Quick Start (Local Deployment)
+### 2. The API Backend (`axiom_web/backend/`)
+A high-performance **FastAPI** server that bridges the neural network with the outside world.
+- **Inference Engine**: Loads `sft_best.pt` into memory and manages tensor generation.
+- **RAG Retrievers**: Implements `LocalRetriever` (FAISS), `WebRetriever` (DuckDuckGo), and `HybridRetriever`.
+- **SSE Streaming**: Yields generated tokens incrementally to reduce perceived latency.
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- `sft_best.pt` checkpoint file (Place in `axiom_model/`)
-
-### 1. Start the Backend (Terminal 1)
-
-The backend loads the 114M parameter PyTorch model into RAM and exposes a streaming inference API.
-
-```bash
-cd axiom_web/backend
-pip install -r requirements.txt
-pip install -r ../../axiom_model/requirements.txt
-uvicorn main:app --reload --port 8000
-```
-*Wait until you see `Model loaded successfully!` in the console.*
-
-### 2. Start the Frontend (Terminal 2)
-
-The frontend connects to the backend and provides a beautiful chat interface.
-
-```bash
-cd axiom_web/frontend
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173` in your browser and start chatting with Axiom!
+### 3. The React Frontend (`axiom_web/frontend/`)
+A stunning user interface built with **React** and **Vite**.
+- **Message Rendering**: Parses Markdown and displays code blocks beautifully.
+- **Dynamic Mode Selector**: A custom-built dropdown allowing users to switch between "Local Only", "Database", "Live Web Search", and "Hybrid Brain".
+- **Source Citations**: Displays clickable URL pills for any information retrieved via RAG.
 
 ---
 
-## 🛠️ Training the Model
+## 🚀 Development Phases
 
-If you want to train your own version of Axiom from scratch:
+### Phase 1: Architecture & Pre-training
+We began by building a flexible, modular GPT architecture. To ensure we were using the most efficient design, we ran rigorous benchmarks against various architectural choices:
+- **Attention**: Multi-Head Attention vs. Grouped-Query Attention (GQA). *Winner: GQA.*
+- **Activations**: Standard GeLU vs. SwiGLU. *Winner: SwiGLU.*
+- **Positional Encoding**: Absolute Positional Embeddings vs. Rotary Positional Embeddings (RoPE). *Winner: RoPE.*
 
-1. Configure your hyperparameters in `axiom_model/configs/base.yaml`.
-2. Run the pre-training loop:
+The winning configuration was compiled into `axiom_v1.0.yaml`, and the model was pre-trained on a massive corpus of text to learn the fundamental structure of human language.
+
+### Phase 2: Supervised Fine-Tuning (SFT)
+A base model only knows how to predict the next word—it doesn't know how to act like an assistant. In Phase 2, we formatted high-quality instruction datasets into conversational `<|user|>` and `<|assistant|>` formats. We then ran a Supervised Fine-Tuning training loop to align the model, resulting in our final deployable weights: `sft_best.pt`.
+
+### Phase 3: RAG Implementation
+To solve the problem of LLM hallucinations and static knowledge cutoff dates, we built a Retrieval-Augmented Generation (RAG) pipeline.
+- If the user selects **Web Mode**, the backend pauses the model, executes a live Python DuckDuckGo search, scrapes the top articles, and formats them into a strictly structured system prompt. The model is then instructed to read the scraped text and answer the user's question, citing its sources.
+
+### Phase 4: Full-Stack Deployment
+Finally, we built a FastAPI backend to serve the model via an SSE stream, and constructed a beautiful React frontend to consume it. We implemented a sleek glassmorphism aesthetic with rigid flex-box layouts to ensure a perfectly stable, jitter-free streaming experience.
+
+---
+
+## 🛠 Tech Stack
+
+- **AI/ML**: PyTorch, FAISS, Transformers, Tiktoken
+- **Backend**: Python, FastAPI, Uvicorn, DuckDuckGo-Search (`ddgs`)
+- **Frontend**: React, Vite, CSS3, Lucide-React, React-Markdown
+
+## 🎮 How to Run
+
+1. **Start the Backend**
    ```bash
-   cd axiom_model/scripts/training
-   python train.py
-   ```
-3. Fine-tune for instruction following (SFT):
-   ```bash
-   python sft.py
+   cd axiom_web/backend
+   pip install -r requirements.txt
+   uvicorn main:app --reload --port 8000
    ```
 
+2. **Start the Frontend**
+   ```bash
+   cd axiom_web/frontend
+   npm install
+   npm run dev
+   ```
+
+3. Open `http://localhost:5173` in your browser and start chatting!
+
 ---
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-<div align="center">
-  <p>Built with ❤️ by Harsh</p>
-</div>
+*Built from scratch with ❤️*
