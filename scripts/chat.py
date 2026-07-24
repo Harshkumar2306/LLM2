@@ -45,10 +45,13 @@ def main():
     if 'norm_type' in config_kwargs and isinstance(config_kwargs['norm_type'], str):
         config_kwargs['norm_type'] = NormType(config_kwargs['norm_type'])
     gpt_config = GPTConfig(**config_kwargs)
-    gpt_config.vocab_size = 50261
+    checkpoint = torch.load(args.checkpoint, map_location=device)
+    
+    # Dynamically read vocab size from checkpoint to support both Phase 2 (50257) and Phase 3 (50261)
+    checkpoint_vocab_size = checkpoint['model_state']['embeddings.wte.weight'].shape[0]
+    gpt_config.vocab_size = checkpoint_vocab_size
     
     model = GPT(gpt_config)
-    checkpoint = torch.load(args.checkpoint, map_location=device)
     model.load_state_dict(checkpoint['model_state'])
     model.to(device)
     model.eval()
