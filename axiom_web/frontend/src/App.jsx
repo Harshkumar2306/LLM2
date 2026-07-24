@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Bot, User, Link as LinkIcon } from 'lucide-react';
+import { Send, Bot, User, Link as LinkIcon, ChevronDown, Database, Globe, Cpu, Zap } from 'lucide-react';
 import './index.css';
 
 function App() {
@@ -11,6 +11,28 @@ function App() {
   const [mode, setMode] = useState('hybrid');
   const [isGenerating, setIsGenerating] = useState(false);
   const messagesEndRef = useRef(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const modes = [
+    { id: 'none', name: 'Local Only', icon: Cpu, desc: 'Internal knowledge' },
+    { id: 'local', name: 'Database (FAISS)', icon: Database, desc: 'Local vector DB' },
+    { id: 'web', name: 'Live Web Search', icon: Globe, desc: 'Searches the internet live' },
+    { id: 'hybrid', name: 'Hybrid Brain', icon: Zap, desc: 'Local + Web Search' },
+  ];
+  
+  const currentMode = modes.find(m => m.id === mode);
+  const CurrentIcon = currentMode?.icon || Cpu;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -93,17 +115,40 @@ function App() {
           <Bot size={28} color="#60a5fa" />
           Axiom v1.0
         </div>
-        <select 
-          className="mode-selector" 
-          value={mode} 
-          onChange={(e) => setMode(e.target.value)}
-          disabled={isGenerating}
-        >
-          <option value="none">Local Only</option>
-          <option value="local">Database (FAISS)</option>
-          <option value="web">Live Web Search</option>
-          <option value="hybrid">Hybrid Brain</option>
-        </select>
+        <div className="custom-dropdown" ref={dropdownRef}>
+          <button 
+            className="dropdown-trigger" 
+            onClick={() => !isGenerating && setIsDropdownOpen(!isDropdownOpen)}
+            disabled={isGenerating}
+          >
+            <CurrentIcon size={16} className="dropdown-icon" />
+            <span>{currentMode?.name}</span>
+            <ChevronDown size={16} className={`chevron ${isDropdownOpen ? 'open' : ''}`} />
+          </button>
+          
+          {isDropdownOpen && (
+            <div className="dropdown-menu">
+              {modes.map((m) => {
+                const Icon = m.icon;
+                return (
+                  <div 
+                    key={m.id} 
+                    className={`dropdown-item ${mode === m.id ? 'active' : ''}`}
+                    onClick={() => { setMode(m.id); setIsDropdownOpen(false); }}
+                  >
+                    <div className="icon-container">
+                      <Icon size={18} className="item-icon" />
+                    </div>
+                    <div className="item-text">
+                      <div className="item-name">{m.name}</div>
+                      <div className="item-desc">{m.desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </header>
 
       <main className="chat-container">
