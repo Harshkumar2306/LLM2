@@ -1,5 +1,8 @@
 from typing import List, Dict, Any
-from duckduckgo_search import DDGS
+try:
+    from ddgs import DDGS
+except ImportError:
+    from duckduckgo_search import DDGS
 from .base import Retriever
 
 class WebRetriever(Retriever):
@@ -16,6 +19,7 @@ class WebRetriever(Retriever):
         try:
             results = self.ddgs.text(search_query, max_results=self.top_k)
             if not results:
+                print(f"[WebRetriever] Warning: DDGS returned 0 results for query '{search_query}'.")
                 return []
                 
             formatted_results = []
