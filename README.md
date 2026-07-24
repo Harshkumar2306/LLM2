@@ -55,7 +55,15 @@ We began by building a flexible, modular GPT architecture. To ensure we were usi
 - **Activations**: Standard GeLU vs. SwiGLU. *Winner: SwiGLU.*
 - **Positional Encoding**: Absolute Positional Embeddings vs. Rotary Positional Embeddings (RoPE). *Winner: RoPE.*
 
-The winning configuration was compiled into `axiom_v1.0.yaml`, and the model was pre-trained on a massive corpus of text to learn the fundamental structure of human language.
+The winning configuration was compiled into `axiom_v1.0.yaml`, and the model was pre-trained to learn the fundamental structure of human language.
+
+#### The 7.5B Token Training Curriculum
+To ensure Axiom learned a robust world model, we crafted a carefully balanced 7.5 Billion token dataset mixture (configured in `datasets.yaml`):
+- **55% FineWeb-Edu** (`HuggingFaceFW/fineweb-edu`): High-quality educational web data for general knowledge.
+- **20% StarCoder** (`vikp/starcoder_cleaned`): Cleaned programming data to teach the model logical reasoning and code synthesis.
+- **10% Wikipedia** (`wikimedia/wikipedia`): Encyclopedic facts and historical data.
+- **10% OpenOrca** (`Open-Orca/OpenOrca`): Technical and instructional data.
+- **5% MiniPile Books** (`JeanKaddour/minipile`): Long-form literature to improve narrative coherence and long-range context.
 
 ### Phase 2: Supervised Fine-Tuning (SFT)
 A base model only knows how to predict the next word—it doesn't know how to act like an assistant. In Phase 2, we formatted high-quality instruction datasets into conversational `<|user|>` and `<|assistant|>` formats. We then ran a Supervised Fine-Tuning training loop to align the model, resulting in our final deployable weights: `sft_best.pt`.
