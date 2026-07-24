@@ -1,3 +1,13 @@
+---
+title: Axiom LLM
+emoji: 🚀
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+app_port: 8000
+---
+
 # 🚀 Axiom AI: Full-Stack Large Language Model Ecosystem
 
 An end-to-end, fully custom 114M parameter Large Language Model and Hybrid-RAG Web Ecosystem.
